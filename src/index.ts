@@ -9,7 +9,7 @@ const app = new Application({
 	height: 480
 });
 
-Loader.shared.add({url: "./dino3.jpeg", name:"myDino"});
+Loader.shared.add({url: "./dino.png", name:"myDino"});
 
 
 
@@ -19,7 +19,7 @@ const clampy: Sprite = Sprite.from("myDino");
 clampy.anchor.set(0.5);
 
 clampy.x = 300;
-clampy.y = 300;
+clampy.y = 200;
 
 app.stage.addChild(clampy);
 });
