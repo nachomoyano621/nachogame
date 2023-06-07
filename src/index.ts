@@ -34,23 +34,30 @@ window.dispatchEvent(new Event("resize"));
 
 Loader.shared.add({url: "./dino.png", name:"myDino"});
 Loader.shared.add({url: "./patineta.png", name:"patineta"});
-
+Loader.shared.add({url: "./capa.png", name:"capa"});
+Loader.shared.add({url: "./corona.png", name:"corona"});
 
 
 Loader.shared.onComplete.add(()=>{
 const dino: Sprite = Sprite.from("myDino");
-
-
-
 const patineta: Sprite = Sprite.from("patineta");
+const capa: Sprite = Sprite.from("capa");
+const corona: Sprite = Sprite.from("corona");
 
 patineta.position.set(10,100);
 patineta.scale.set(0.7,0.7);
+corona.scale.set(0.4,0.4);
+corona.position.set(150,-59);
+capa.position.set(198,-55);
+capa.scale.set(0.7,0.7);
+capa.angle = 105;
 
 const dinoWithPatineta: Container = new Container();
 
 dinoWithPatineta.addChild(patineta);
 dinoWithPatineta.addChild(dino);
+dinoWithPatineta.addChild(capa);
+dinoWithPatineta.addChild(corona);
 
 dinoWithPatineta.x= 200;
 dinoWithPatineta.y= 300;
