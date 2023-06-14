@@ -1,4 +1,7 @@
-import { Application, Container, Loader, Sprite } from 'pixi.js'
+import { Application, Loader } from 'pixi.js'
+import { assets } from './assets';
+import { Scene } from './Scene';
+
 
 const app = new Application({
 	view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
@@ -32,37 +35,12 @@ window.addEventListener("resize", ()=>{//Evento para centrar la imagen cuando se
 window.dispatchEvent(new Event("resize"));
 
 
-Loader.shared.add({url: "./dino.png", name:"myDino"});
-Loader.shared.add({url: "./patineta.png", name:"patineta"});
-Loader.shared.add({url: "./capa.png", name:"capa"});
-Loader.shared.add({url: "./corona.png", name:"corona"});
-
+Loader.shared.add(assets);
 
 Loader.shared.onComplete.add(()=>{
-const dino: Sprite = Sprite.from("myDino");
-const patineta: Sprite = Sprite.from("patineta");
-const capa: Sprite = Sprite.from("capa");
-const corona: Sprite = Sprite.from("corona");
 
-patineta.position.set(10,100);
-patineta.scale.set(0.7,0.7);
-corona.scale.set(0.4,0.4);
-corona.position.set(150,-59);
-capa.position.set(198,-55);
-capa.scale.set(0.7,0.7);
-capa.angle = 105;
-
-const dinoWithPatineta: Container = new Container();
-
-dinoWithPatineta.addChild(patineta);
-dinoWithPatineta.addChild(dino);
-dinoWithPatineta.addChild(capa);
-dinoWithPatineta.addChild(corona);
-
-dinoWithPatineta.x= 200;
-dinoWithPatineta.y= 300;
-
-app.stage.addChild(dinoWithPatineta);
+	const myScene = new Scene();
+	app.stage.addChild(myScene);
 
 });
 
