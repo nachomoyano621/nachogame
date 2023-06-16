@@ -1,12 +1,17 @@
 export const assets = [
     {url: "./dino.png", name:"myDino"},
-    {url: "./dino1.png", name:"myDino1"},
-    {url: "./dino2.png", name:"myDino2"},
-    {url: "./dino3.png", name:"myDino3"},
-    {url: "./dino4.png", name:"myDino4"},
-    {url: "./dino5.png", name:"myDino5"},
-    {url: "./dino6.png", name:"myDino6"},
+    {url: "./h1.png", name:"hombre1"},
+    {url: "./h2.png", name:"hombre2"},
+    {url: "./h3.png", name:"hombre3"},
+    {url: "./h4.png", name:"hombre4"},
+    {url: "./h5.png", name:"hombre5"},
+    {url: "./h6.png", name:"hombre6"},
+    {url: "./h7.png", name:"hombre7"},
+    {url: "./h8.png", name:"hombre8"},
+    {url: "./h9.png", name:"hombre9"},
+    {url: "./h10.png", name:"hombre10"},
     {url: "./patineta.png", name:"patineta"},
     {url: "./capa.png", name:"capa"},
-    {url: "./corona.png", name:"corona"}
+    {url: "./corona.png", name:"corona"},
+    {url: "./mosquito.png", name:"mosquito"}
 ];
