@@ -1,16 +1,19 @@
 import { Application, Loader } from 'pixi.js'
 import { assets } from './assets';
 import { Scene } from './Scene';
+import { Keyboard } from './utils/Keyboard';
 
 
 const app = new Application({
 	view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
 	resolution: window.devicePixelRatio || 1,
 	autoDensity: true,
-	backgroundColor: 0x6495ed,
+	backgroundColor: 0x000000,
 	width: 1280,
 	height: 720
 });
+
+Keyboard.initialize();
 
 window.addEventListener("resize", ()=>{//Evento para centrar la imagen cuando se cambia el tamaño de la pantalla
 	const scaleX = window.innerWidth / app.screen.width;

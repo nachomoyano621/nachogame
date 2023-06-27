@@ -26,5 +26,7 @@ this.addChild(capa);
 this.addChild(corona);
 
 
+
+
 }
 }

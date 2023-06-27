@@ -13,5 +13,10 @@ export const assets = [
     {url: "./patineta.png", name:"patineta"},
     {url: "./capa.png", name:"capa"},
     {url: "./corona.png", name:"corona"},
-    {url: "./mosquito.png", name:"mosquito"}
+    {url: "./mosquito.png", name:"mosquito"},
+    {url: "./fondo.png", name:"fondo"},
+    {url: "./boton1.png", name:"boton1"},
+    {url: "./boton2.png", name:"boton2"},
+    {url: "./boton3.png", name:"boton3"},
+
 ];
