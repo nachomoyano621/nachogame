@@ -1,9 +1,9 @@
 import { Container, Sprite, Texture, Text } from "pixi.js";
-import { DinoConPatineta } from "./DinoConPatineta";
-import { HombreconHacha } from "./Hombre";
-import { Mosquito } from "./Mosquito";
-import { Button } from "./ui/Button";
-import { Keyboard } from "./utils/Keyboard";
+import { DinoConPatineta } from "../Componentes/DinoConPatineta";
+import { HombreconHacha } from "../Componentes/Hombre";
+import { Mosquito } from "../Componentes/Mosquito";
+import { Button } from "../ui/Button";
+import { Keyboard } from "../utils/Keyboard";
 
 export class Scene extends Container {
 

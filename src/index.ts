@@ -1,16 +1,18 @@
-import { Application, Loader } from 'pixi.js'
-import { assets } from './assets';
-import { Scene } from './Scene';
+import { Application, Loader, Ticker } from 'pixi.js'
+import { assets } from './Componentes/assets';
 import { Keyboard } from './utils/Keyboard';
+import { TinkerScene } from './Scenas/TinkerScene';
 
+export const WIDTH = 1920;
+export const HEIGHT = 1080;
 
 const app = new Application({
 	view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
 	resolution: window.devicePixelRatio || 1,
 	autoDensity: true,
 	backgroundColor: 0x000000,
-	width: 1280,
-	height: 720
+	width: WIDTH,
+	height: HEIGHT,
 });
 
 Keyboard.initialize();
@@ -42,8 +44,11 @@ Loader.shared.add(assets);
 
 Loader.shared.onComplete.add(()=>{
 
-	const myScene = new Scene();
+	const myScene = new TinkerScene();
 	app.stage.addChild(myScene);
+	Ticker.shared.add(function (deltaFrame: number){
+		myScene.update(Ticker.shared.deltaMS,deltaFrame)
+	});
 
 });
 
