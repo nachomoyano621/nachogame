@@ -2,7 +2,6 @@ import { Application, Loader, Ticker } from 'pixi.js'
 import { assets } from './Componentes/assets';
 import { Keyboard } from './utils/Keyboard';
 import { TinkerScene } from './Scenas/TinkerScene';
-
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
 
