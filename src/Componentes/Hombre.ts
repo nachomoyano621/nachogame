@@ -27,7 +27,7 @@ const hombreAnimated: AnimatedSprite = new AnimatedSprite(
 hombreAnimated.x= 800;
 hombreAnimated.y= 300;
 
-hombreAnimated.scale.set(-1.3,1.3);
+hombreAnimated.scale.set(2,2);
 hombreAnimated.play();
 hombreAnimated.animationSpeed = 0.1;
 

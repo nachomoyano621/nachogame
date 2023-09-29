@@ -2,6 +2,8 @@ import { Container, Text, TextStyle, Sprite, Texture } from "pixi.js";
 import { sound } from "@pixi/sound";
 import { Player } from "../game/Player";
 import { GlowFilter } from "@pixi/filter-glow";
+import { DinoConPatineta } from "../Componentes/DinoConPatineta";
+// import { Mosquito } from "../Componentes/Mosquito";
 
 export class TinkerScene extends Container {
   private playerHombre: Player;
@@ -10,6 +12,10 @@ export class TinkerScene extends Container {
   private monedas: Sprite[] = [];
   private monedasSpeed: number = -100; // Velocidad de las monedas
   private world: Container;
+  private dinos: DinoConPatineta[] = [];
+  private dinoSpawnTimer: number = 0;
+  private dinoSpawnInterval: number = 12000; // Intervalo de aparición de los dinos (en milisegundos)
+
   
 
   private timePassed: number = 0;
@@ -19,9 +25,10 @@ export class TinkerScene extends Container {
   
   private timePassedMonedas: number = 0;
 
+
   constructor() {
     super();
-
+  this.dinoSpawnTimer = this.dinoSpawnInterval; // Inicia el temporizador
     this.world = new Container();
     this.addChild(this.world);
 
@@ -34,8 +41,8 @@ export class TinkerScene extends Container {
     this.world.addChild(this.textoMonedas);
 
 // Dimensiones específicas para el fondo
-const fondoAncho = 2040;
-const fondoAlto = 1100;
+const fondoAncho = 2000;
+const fondoAlto = 1080;
 
 // Crea la imagen de fondo y configura la escala (sin tiling)
 const background = new Sprite(Texture.from("fondo"));
@@ -43,10 +50,26 @@ background.width = fondoAncho;
 background.height = fondoAlto;
 this.world.addChild(background);
 
-    this.playerHombre = new Player();
-    const myGlow = new GlowFilter({ color: 0xFF0000, distance: 50 });
-    this.playerHombre.filters = [myGlow];
-    this.world.addChild(this.playerHombre);
+// Crear una instancia del jugador
+this.playerHombre = new Player();
+
+// Quitar el filtro temporalmente
+this.playerHombre.filters = [];
+
+const escalaPromedio = 1.2; // Puedes ajustar este valor como desees
+
+// Cambiar la escala del sprite en ambos ejes
+this.playerHombre.scale.set(escalaPromedio, escalaPromedio);
+
+// Crear un filtro Glow con los valores deseados
+const myGlow = new GlowFilter({ color: 0xFF0000, distance: 50 });
+
+// Volver a aplicar el filtro
+this.playerHombre.filters = [myGlow];
+
+// Agregar el jugador al mundo
+this.world.addChild(this.playerHombre);
+
 
     this.monedasRecogidas = 0;
 
@@ -58,6 +81,13 @@ this.world.addChild(background);
     this.monedaChicaSprite.scale.set(0.21);
     this.monedaChicaSprite.position.set(0, 0);
     this.monedaChicaContainer.addChild(this.monedaChicaSprite);
+
+      // Crea una instancia de DinoConPatineta
+  const dino = new DinoConPatineta();
+  
+
+  // Agrega el personaje a la escena
+  this.world.addChild(dino);
 
     const sndCancion = sound.find("cancion");
     sndCancion.play({ volume: 0.2, loop: true });
@@ -129,22 +159,19 @@ this.world.addChild(background);
   }
 
   public update(deltaTime: number, _deltaFrame: number): void {
-    this.timePassed += deltaTime;
+    // Actualiza el temporizador de aparición de dinos
+    this.dinoSpawnTimer += deltaTime;
   
-    if (this.timePassed > 2000) {  
-      this.timePassed = 0;
+    if (this.dinoSpawnTimer >= this.dinoSpawnInterval) {
+      this.dinoSpawnTimer = 0; // Reinicia el temporizador
+      this.spawnDino(); // Aparece un nuevo dino
     }
   
-    this.timePassedMonedas += deltaTime;
-    if (this.timePassedMonedas > 6000) {
-      this.timePassedMonedas = 0;
-      this.spawnMoneda();
-    }
-  
+    // Actualiza la posición de las monedas y verifica la colisión con el jugador
     for (let i = this.monedas.length - 1; i >= 0; i--) {
       const moneda = this.monedas[i];
       moneda.x += this.monedasSpeed * (deltaTime / 1000);
-    
+  
       // Verificar colisión con el jugador
       const playerBounds = this.playerHombre.getBounds();
       const monedaBounds = moneda.getBounds();
@@ -161,6 +188,31 @@ this.world.addChild(background);
     const horizontalLimitRight = 1920 - 120;
     const verticalLimitTop = 40;
     const verticalLimitBottom = 1080 - 210;
+  
+    for (let i = this.dinos.length - 1; i >= 0; i--) {
+      const dino = this.dinos[i];
+      dino.position.x += dino.getSpeedX() * (deltaTime / 1000);
+      this.timePassed += deltaTime;
+  
+      if (this.timePassed > 2000) {
+        this.timePassed = 0;
+      }
+  
+      this.timePassedMonedas += deltaTime;
+      if (this.timePassedMonedas > 4000) {
+        this.timePassedMonedas = 0;
+        this.spawnMoneda();
+      }
+  
+      // Verificar colisión con el jugador
+      const playerBounds = this.playerHombre.getBounds();
+      const dinoBounds = dino.getBounds();
+  
+      if (playerBounds.intersects(dinoBounds)) {
+        // Si hay una colisión con el dino, eliminarlo
+        this.removeDino(dino);
+      }
+    }
   
     this.playerHombre.update(deltaTime);
   
@@ -181,12 +233,34 @@ this.world.addChild(background);
     this.updateMonedasColision();
   }
 
+  
   private spawnMoneda(): void {
     const moneda = Sprite.from("moneda");
-    const posY = Math.random() * 540 + 540; // Aparecer desde la coordenada Y de 540 hacia abajo
+    const posY = 970; // Aparecer desde la coordenada Y de 540 hacia abajo
     moneda.position.set(1920, posY); // Iniciar desde la derecha
     moneda.scale.set(0.25);
     this.monedas.push(moneda);
     this.world.addChild(moneda);
   }
+
+  private spawnDino(): void {
+    const dino = new DinoConPatineta();
+    dino.position.set(1920, 890); // Posición inicial del dino
+    dino.setSpeedX(-100); // Velocidad horizontal del dino
+    this.world.addChild(dino);
+    this.dinos.push(dino);
+  }
+
+  
+  private removeDino(dino: DinoConPatineta): void {
+    // Encuentra el índice del dino en el arreglo y elimínalo
+    const index = this.dinos.indexOf(dino);
+    if (index !== -1) {
+      this.dinos.splice(index, 1); // Elimina el dino del arreglo
+    }
+  
+    // Elimina el dino del mundo
+    this.world.removeChild(dino);
+  }
+  
 }

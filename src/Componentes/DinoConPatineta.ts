@@ -1,32 +1,37 @@
-import { Container, Sprite } from "pixi.js";
-import { PhysicaContainer } from "../game/PhysicalContainer";
+import { AnimatedSprite, Container, Texture } from "pixi.js";
 
 export class DinoConPatineta extends Container {
-    public physContainer: PhysicaContainer;
+  private speedX: number = -100; // Velocidad horizontal del dino
 
   constructor() {
     super();
-   
-    const dino: Sprite = Sprite.from("myDino");
-    const patineta: Sprite = Sprite.from("patineta");
-    const capa: Sprite = Sprite.from("capa");
-    const corona: Sprite = Sprite.from("corona");
 
-    patineta.position.set(10, 100);
-    patineta.scale.set(0.7, 0.7);
-    corona.scale.set(0.4, 0.4);
-    corona.position.set(150, -59);
-    capa.position.set(198, -55);
-    capa.scale.set(0.7, 0.7);
-    capa.angle = 105;
+    const textures = [
+      Texture.from("dino1"),
+      Texture.from("dino2"),
+    ];
 
-    this.addChild(patineta);
-    this.addChild(dino); // Agrega el sprite del dinosaurio al contenedor
-    this.addChild(capa);
-    this.addChild(corona);
+    const dinoAnimated: AnimatedSprite = new AnimatedSprite(textures);
+    dinoAnimated.scale.set(-0.7, 0.7);
+    dinoAnimated.animationSpeed = 0.1;
 
-    // Crea y configura el contenedor físico
-    this.physContainer = new PhysicaContainer();
-    this.addChild(this.physContainer);
+    // Configura las texturas para alternar entre "dino1" y "dino2"
+    dinoAnimated.onFrameChange = () => {
+      const currentTextureIndex = dinoAnimated.currentFrame;
+      const nextTextureIndex = (currentTextureIndex + 1) % textures.length;
+      dinoAnimated.texture = textures[nextTextureIndex];
+    };
+
+    this.addChild(dinoAnimated);
+  }
+
+  // Método para obtener la velocidad horizontal del dino
+  getSpeedX(): number {
+    return this.speedX;
+  }
+
+  // Método para establecer la velocidad horizontal del dino
+  setSpeedX(speed: number): void {
+    this.speedX = speed;
   }
 }
