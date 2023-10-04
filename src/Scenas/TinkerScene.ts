@@ -3,7 +3,8 @@ import { sound } from "@pixi/sound";
 import { Player } from "../game/Player";
 import { GlowFilter } from "@pixi/filter-glow";
 import { DinoConPatineta } from "../Componentes/DinoConPatineta";
-// import { Mosquito } from "../Componentes/Mosquito";
+
+import { Mosquito } from "../Componentes/Mosquito";
 
 export class TinkerScene extends Container {
   private playerHombre: Player;
@@ -15,6 +16,11 @@ export class TinkerScene extends Container {
   private dinos: DinoConPatineta[] = [];
   private dinoSpawnTimer: number = 0;
   private dinoSpawnInterval: number = 12000; // Intervalo de aparición de los dinos (en milisegundos)
+  private mosquitos: Mosquito[] = [];
+  private mosquitoSpawnInterval: number = 10000;
+  private accumulatedMosquitoTime: number = 0;
+
+
 
   
 
@@ -28,6 +34,8 @@ export class TinkerScene extends Container {
 
   constructor() {
     super();
+
+    
   this.dinoSpawnTimer = this.dinoSpawnInterval; // Inicia el temporizador
     this.world = new Container();
     this.addChild(this.world);
@@ -49,6 +57,11 @@ const background = new Sprite(Texture.from("fondo"));
 background.width = fondoAncho;
 background.height = fondoAlto;
 this.world.addChild(background);
+
+const mosquito = new Mosquito();
+mosquito.position.set(1920, 640); // Posición inicial del mosquito (ajusta la posición como desees)
+this.world.addChild(mosquito);
+this.mosquitos.push(mosquito); // Agrega el mosquito al arreglo de mosquitos
 
 // Crear una instancia del jugador
 this.playerHombre = new Player();
@@ -161,6 +174,7 @@ this.world.addChild(this.playerHombre);
   public update(deltaTime: number, _deltaFrame: number): void {
     // Actualiza el temporizador de aparición de dinos
     this.dinoSpawnTimer += deltaTime;
+    this.accumulatedMosquitoTime += deltaTime;
   
     if (this.dinoSpawnTimer >= this.dinoSpawnInterval) {
       this.dinoSpawnTimer = 0; // Reinicia el temporizador
@@ -189,6 +203,7 @@ this.world.addChild(this.playerHombre);
     const verticalLimitTop = 40;
     const verticalLimitBottom = 1080 - 210;
   
+    // Actualiza la posición de los dinos y verifica la colisión con el jugador
     for (let i = this.dinos.length - 1; i >= 0; i--) {
       const dino = this.dinos[i];
       dino.position.x += dino.getSpeedX() * (deltaTime / 1000);
@@ -230,9 +245,36 @@ this.world.addChild(this.playerHombre);
       this.playerHombre.speed.y = 0;
     }
   
+    // Actualiza la posición de los mosquitos y verifica la colisión con el jugador
+    for (let i = this.mosquitos.length - 1; i >= 0; i--) {
+      const mosquito = this.mosquitos[i];
+      mosquito.x -= 200 * (deltaTime / 1000); // Velocidad horizontal de los mosquitos
+  
+      const playerBounds = this.playerHombre.getBounds();
+      const mosquitoBounds = mosquito.getBounds();
+  
+      if (playerBounds.intersects(mosquitoBounds)) {
+        // Realiza acciones cuando el jugador colisiona con un mosquito, por ejemplo, eliminar el mosquito.
+        this.onMosquitoCollision(mosquito);
+      }
+  
+      if (mosquito.x < -mosquito.width) {
+        // Elimina el mosquito si sale de la pantalla
+        this.removeMosquito(mosquito);
+      }
+      // Actualiza el temporizador de aparición de mosquitos
+      this.accumulatedMosquitoTime += deltaTime;
+
+  // Verifica si ha pasado el tiempo suficiente para crear un nuevo mosquito
+  if (this.accumulatedMosquitoTime >= this.mosquitoSpawnInterval) {
+    this.spawnMosquito(); // Aparece un nuevo mosquito
+    this.accumulatedMosquitoTime -= this.mosquitoSpawnInterval; // Resta el intervalo de tiempo
+  }
+    }
+  
     this.updateMonedasColision();
   }
-
+  
   
   private spawnMoneda(): void {
     const moneda = Sprite.from("moneda");
@@ -250,7 +292,18 @@ this.world.addChild(this.playerHombre);
     this.world.addChild(dino);
     this.dinos.push(dino);
   }
-
+  private onMosquitoCollision(mosquito: Mosquito): void {
+    // Realiza acciones cuando el jugador colisiona con un mosquito
+    // Por ejemplo, puedes eliminar el mosquito aquí.
+    const index = this.mosquitos.indexOf(mosquito);
+    if (index !== -1) {
+      this.mosquitos.splice(index, 1); // Elimina el mosquito del arreglo
+    }
+  
+    this.world.removeChild(mosquito); // Elimina el mosquito del mundo
+  
+    // Agrega aquí cualquier otra acción que desees realizar cuando colisiona con un mosquito.
+  }
   
   private removeDino(dino: DinoConPatineta): void {
     // Encuentra el índice del dino en el arreglo y elimínalo
@@ -261,6 +314,22 @@ this.world.addChild(this.playerHombre);
   
     // Elimina el dino del mundo
     this.world.removeChild(dino);
+  }
+  private spawnMosquito(): void {
+    const mosquito = new Mosquito();
+    mosquito.position.set(1920, 640); // Posición inicial del mosquito (ajusta la posición como desees)
+    this.world.addChild(mosquito);
+    this.mosquitos.push(mosquito); // Agrega el mosquito al arreglo de mosquitos
+  }
+  private removeMosquito(mosquito: Mosquito): void {
+    // Encuentra el índice del mosquito en el arreglo y elimínalo
+    const index = this.mosquitos.indexOf(mosquito);
+    if (index !== -1) {
+      this.mosquitos.splice(index, 1); // Elimina el mosquito del arreglo
+    }
+  
+    // Elimina el mosquito del mundo
+    this.world.removeChild(mosquito);
   }
   
 }
