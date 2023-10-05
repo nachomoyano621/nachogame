@@ -17,9 +17,6 @@ export const assets = [
     {url: "./corona.png", name:"corona"},
     {url: "./mosquito.png", name:"mosquito"},
     {url: "./fondo.jpg", name:"fondo"},
-    {url: "./boton1.png", name:"boton1"},
-    {url: "./boton2.png", name:"boton2"},
-    {url: "./boton3.png", name:"boton3"},
     {url: "./plataforma1.png", name:"plataforma1"},
     {url: "./plataforma2.png", name:"plataforma2"},
     {url: "./cancion.mp3", name:"cancion"},
@@ -27,6 +24,10 @@ export const assets = [
     {url: "./moneda.png", name:"moneda"},
     {url: "./Fire.png", name:"Fire"},
     {url: "./particle.png", name:"Particle"},
+    {url: "./Comienzo.jpg", name:"comienzo"},
+    {url: "./GameOver.jpg", name:"gameover"},
+    {url: "./JUGAR_r.png", name:"boton"},
+    
 
     
 
