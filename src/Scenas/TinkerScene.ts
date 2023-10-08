@@ -3,6 +3,7 @@ import { sound } from "@pixi/sound";
 import { Player } from "../game/Player";
 import { GlowFilter } from "@pixi/filter-glow";
 import { DinoConPatineta } from "../Componentes/DinoConPatineta";
+import { GAME_DELTA_TIME } from '../index';
 
 import { Mosquito } from "../Componentes/Mosquito";
 
@@ -17,7 +18,7 @@ export class TinkerScene extends Container {
   private dinoSpawnTimer: number = 0;
   private dinoSpawnInterval: number = 12000; // Intervalo de aparición de los dinos (en milisegundos)
   private mosquitos: Mosquito[] = [];
-  private mosquitoSpawnInterval: number = 10000;
+  private mosquitoSpawnInterval: number = 15000;
   private accumulatedMosquitoTime: number = 0;
 
 
@@ -171,10 +172,10 @@ this.world.addChild(this.playerHombre);
     this.monedaChicaContainer.addChild(this.textoMonedas);
   }
 
-  public update(deltaTime: number, _deltaFrame: number): void {
+  public update(): void {
     // Actualiza el temporizador de aparición de dinos
-    this.dinoSpawnTimer += deltaTime;
-    this.accumulatedMosquitoTime += deltaTime;
+    this.dinoSpawnTimer += GAME_DELTA_TIME;
+    this.accumulatedMosquitoTime += GAME_DELTA_TIME;
   
     if (this.dinoSpawnTimer >= this.dinoSpawnInterval) {
       this.dinoSpawnTimer = 0; // Reinicia el temporizador
@@ -184,7 +185,7 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de las monedas y verifica la colisión con el jugador
     for (let i = this.monedas.length - 1; i >= 0; i--) {
       const moneda = this.monedas[i];
-      moneda.x += this.monedasSpeed * (deltaTime / 1000);
+      moneda.x += this.monedasSpeed * (GAME_DELTA_TIME / 1000);
   
       // Verificar colisión con el jugador
       const playerBounds = this.playerHombre.getBounds();
@@ -206,14 +207,14 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de los dinos y verifica la colisión con el jugador
     for (let i = this.dinos.length - 1; i >= 0; i--) {
       const dino = this.dinos[i];
-      dino.position.x += dino.getSpeedX() * (deltaTime / 1000);
-      this.timePassed += deltaTime;
+      dino.position.x += dino.getSpeedX() * (GAME_DELTA_TIME / 1000);
+      this.timePassed += GAME_DELTA_TIME;
   
       if (this.timePassed > 2000) {
         this.timePassed = 0;
       }
   
-      this.timePassedMonedas += deltaTime;
+      this.timePassedMonedas += GAME_DELTA_TIME;
       if (this.timePassedMonedas > 4000) {
         this.timePassedMonedas = 0;
         this.spawnMoneda();
@@ -229,7 +230,7 @@ this.world.addChild(this.playerHombre);
       }
     }
   
-    this.playerHombre.update(deltaTime);
+    this.playerHombre.update(GAME_DELTA_TIME);
   
     if (this.playerHombre.x > horizontalLimitRight) {
       this.playerHombre.x = horizontalLimitRight;
@@ -248,7 +249,7 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de los mosquitos y verifica la colisión con el jugador
     for (let i = this.mosquitos.length - 1; i >= 0; i--) {
       const mosquito = this.mosquitos[i];
-      mosquito.x -= 200 * (deltaTime / 1000); // Velocidad horizontal de los mosquitos
+      mosquito.x -= 200 * (GAME_DELTA_TIME / 1000); // Velocidad horizontal de los mosquitos
   
       const playerBounds = this.playerHombre.getBounds();
       const mosquitoBounds = mosquito.getBounds();
@@ -263,7 +264,7 @@ this.world.addChild(this.playerHombre);
         this.removeMosquito(mosquito);
       }
       // Actualiza el temporizador de aparición de mosquitos
-      this.accumulatedMosquitoTime += deltaTime;
+      this.accumulatedMosquitoTime += GAME_DELTA_TIME;
 
   // Verifica si ha pasado el tiempo suficiente para crear un nuevo mosquito
   if (this.accumulatedMosquitoTime >= this.mosquitoSpawnInterval) {

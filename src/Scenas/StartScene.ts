@@ -1,13 +1,19 @@
-// StartScene.ts
-import { Application, Container, Sprite, Texture } from 'pixi.js';
+import { Container, Sprite, Texture, Application, Text, TextStyle } from 'pixi.js';
 import { TinkerScene } from './TinkerScene';
-import { Button } from '../ui/Button';
+import { Keyboard } from '../utils/Keyboard'; // Importa Keyboard
 
 export class StartScene extends Container {
-  constructor() {
+  private app: Application;
+
+  constructor(app: Application) {
     super();
-    const fondoAncho = 1800;
+    this.app = app;
+
+    const fondoAncho = 1920;
     const fondoAlto = 1080;
+
+
+   
 
     // Fondo de inicio
     const fondo = new Sprite(Texture.from('comienzo'));
@@ -15,39 +21,43 @@ export class StartScene extends Container {
     fondo.height = fondoAlto;
     this.addChild(fondo);
 
-    // Crea un botón utilizando la clase Button
-    const botonJugar = new Button(
-      Texture.from('boton'), // Textura por defecto
-      Texture.from('botonPressed'), // Textura cuando se presiona
-      Texture.from('botonOver') // Textura cuando se pasa el mouse por encima
-    );
+  // Crear un estilo de texto
+  const estiloTexto = new TextStyle({
+    fill: [
+      "#ed0707",
+      "#000000"
+  ],// Color de texto fuchsia
+    fontSize: 85, // Tamaño de fuente
+    fontWeight: "bold", // Fuente en negrita
+  });
 
-   
-    botonJugar.position.set(910, 400);
-    this.addChild(botonJugar);
+  
 
-    // Agrega un evento personalizado al botón "JUGAR"
-    botonJugar.on('clickk', () => {
-      // Cuando se hace clic en el botón, cambia a la escena del juego principal (TinkerScene)
-      const canvas = document.getElementById('pixi-canvas') as HTMLCanvasElement;
-      const app = new Application({
-        view: canvas,
-        resolution: window.devicePixelRatio || 1,
-        autoDensity: true,
-        backgroundColor: 0x000000,
-        width: 1920,
-        height: 1080,
-      });
-      const tinkerScene = new TinkerScene();
-      app.stage.addChild(tinkerScene);
+  const t = new Text("Presiona enter para jugar", estiloTexto);
+  t.position.set(1050, 38);
+  t.scale.set(0.68);
+  this.addChild(t);
 
-      // Limpia la escena actual (Inicio)
-      this.destroy({ children: true, texture: true, baseTexture: true });
 
-      // Agrega un bucle de juego a la nueva escena
-      app.ticker.add((deltaFrame: number) => {
-        tinkerScene.update(app.ticker.deltaMS, deltaFrame);
-      });
+    const boton = new Sprite(Texture.from('boton'));
+    boton.position.set(1750, 18);
+    boton.scale.set(0.2);
+    this.addChild(boton)
+
+ // Escuchar el evento keydown para la tecla Enter
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === Keyboard.KEYS.ENTER) {
+        const tinkerScene = new TinkerScene();
+        this.app.stage.addChild(tinkerScene);
+
+        // Limpia la escena actual (Inicio)
+        this.parent.removeChild(this);
+
+        // Agrega un bucle de juego a la nueva escena
+        this.app.ticker.add(() => {
+          tinkerScene.update();
+        });
+      }
     });
   }
 }

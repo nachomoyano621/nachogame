@@ -26,7 +26,7 @@ export const assets = [
     {url: "./particle.png", name:"Particle"},
     {url: "./Comienzo.jpg", name:"comienzo"},
     {url: "./GameOver.jpg", name:"gameover"},
-    {url: "./JUGAR_r.png", name:"boton"},
+    {url: "./enter.png", name:"boton"},
     
 
     

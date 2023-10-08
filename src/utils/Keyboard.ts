@@ -26,7 +26,7 @@ document.addEventListener("keyup",Keyboard.onKeyUp)
 
 
 
-private static onKeyDown(e: KeyboardEvent){
+public static onKeyDown(e: KeyboardEvent){
     if(Keyboard.state.get(e.code) != true){   
 Keyboard.down.emit(e.code);
 
@@ -35,7 +35,9 @@ Keyboard.state.set(e.code,true)
 }
 
 
-
+public static readonly KEYS = {
+    ENTER: 'Enter', // Agrega más teclas según tus necesidades
+  };
 
 private static onKeyUp(e: KeyboardEvent){
     Keyboard.up.emit(e.code);

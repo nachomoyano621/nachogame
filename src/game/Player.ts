@@ -6,8 +6,8 @@ import { IHitbox } from "./IHitbox";
 
 export class Player extends PhysicaContainer implements IHitbox {
   private static readonly GRAVITY = 500;
-  private static readonly MOVE_SPEED = 200;//para qye se quede en el lugar es 0
-  private static readonly JUMP_SPEED = 600;
+  private static readonly MOVE_SPEED = 300;//para qye se quede en el lugar es 0
+  private static readonly JUMP_SPEED = 700;
   public canJump = true;
 
   private hombreAnimated: AnimatedSprite;

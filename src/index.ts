@@ -1,17 +1,18 @@
-import { Application, Loader, Ticker } from 'pixi.js'
+import { Application, Loader} from 'pixi.js';
 import { assets } from './Componentes/assets';
 import { Keyboard } from './utils/Keyboard';
-import { TinkerScene } from './Scenas/TinkerScene';
+import { StartScene } from './Scenas/StartScene'; // Importa StartScene
+
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
-
+export const GAME_DELTA_TIME = 80;
 const app = new Application({
-	view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
-	resolution: window.devicePixelRatio || 1,
-	autoDensity: true,
-	backgroundColor: 0x000000,
-	width: WIDTH,
-	height: HEIGHT,
+  view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
+  resolution: window.devicePixelRatio || 1,
+  autoDensity: true,
+  backgroundColor: 0x000000,
+  width: WIDTH,
+  height: HEIGHT,
 });
 
 Keyboard.initialize();
@@ -38,17 +39,11 @@ window.addEventListener("resize", ()=>{//Evento para centrar la imagen cuando se
 });
 window.dispatchEvent(new Event("resize"));
 
-
 Loader.shared.add(assets);
 
-Loader.shared.onComplete.add(()=>{
-
-	const myScene = new TinkerScene();
-	app.stage.addChild(myScene);
-	Ticker.shared.add(function (deltaFrame: number){
-		myScene.update(Ticker.shared.deltaMS,deltaFrame)
-	});
-
-});
+Loader.shared.onComplete.add(() => {
+	const startScene = new StartScene(app); // Pasa la instancia de 'app' a 'StartScene'
+	app.stage.addChild(startScene);
+  });
 
 Loader.shared.load();
