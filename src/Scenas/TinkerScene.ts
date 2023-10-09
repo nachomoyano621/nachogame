@@ -9,6 +9,7 @@ import { GAME_DELTA_TIME } from '../index';
 
 import { Mosquito } from "../Componentes/Mosquito";
 import { FinalScene } from "./FinalScene";
+import { WinScene } from "./WinScene";
 // import { StartScene } from "./StartScene";
 
 export class TinkerScene extends Container {
@@ -24,6 +25,7 @@ export class TinkerScene extends Container {
   private mosquitos: Mosquito[] = [];
   private mosquitoSpawnInterval: number = 15000;
   private accumulatedMosquitoTime: number = 0;
+  private juegoEnCurso: boolean = true;
 
 
 
@@ -108,8 +110,10 @@ this.world.addChild(this.playerHombre);
   // Agrega el personaje a la escena
   this.world.addChild(dino);
 
-    const sndCancion = sound.find("cancion");
+  const sndCancion = sound.find("cancion");
+  if (!sndCancion.isPlaying) {
     sndCancion.play({ volume: 0.2, loop: true });
+  }
 
     const tStyle = new TextStyle({
       dropShadowColor: "#f9ecec",
@@ -159,6 +163,9 @@ this.world.addChild(this.playerHombre);
   }
 
   private actualizarTextoMonedas(): void {
+    if (this.monedasRecogidas === 2) {
+      this.changeToWinScene(); // Cambia a la escena de victoria cuando se recogen 2 monedas
+    }
     // Verifica si el textoMonedas ya está en el mundo y lo elimina
     if (this.textoMonedas.parent) {
       this.textoMonedas.parent.removeChild(this.textoMonedas);
@@ -175,9 +182,15 @@ this.world.addChild(this.playerHombre);
   
     // Agrega el texto actualizado al contenedor correcto
     this.monedaChicaContainer.addChild(this.textoMonedas);
+
+  
   }
 
   public update(): void {
+    if (!this.juegoEnCurso) {
+      return; // Si el juego no está en curso, no hagas actualizaciones adicionales.
+    }
+  
     // Actualiza el temporizador de aparición de dinos
     this.dinoSpawnTimer += GAME_DELTA_TIME;
     this.accumulatedMosquitoTime += GAME_DELTA_TIME;
@@ -340,6 +353,9 @@ this.world.addChild(this.playerHombre);
     this.world.removeChild(mosquito);
   }
   private changeToFinalScene(): void {
+    this.juegoEnCurso = false;
+    const sndCancion = sound.find("cancion");
+    sndCancion.stop(); 
     // Crea una instancia de FinalScene y agrega al escenario
     const finalScene = new FinalScene(this.app);
     this.app.stage.addChild(finalScene);
@@ -351,4 +367,18 @@ this.world.addChild(this.playerHombre);
     this.app.ticker.remove(this.update, this);
   }
   
+
+  private changeToWinScene(): void {
+    // Establece el juego como no en curso
+    this.juegoEnCurso = false;
+    const sndCancion = sound.find("cancion");
+  sndCancion.stop(); 
+  
+    // Crea una instancia de WinScene y agrégala al escenario
+    const winScene = new WinScene(this.app);
+    this.app.stage.addChild(winScene);
+  
+    // Limpia la escena actual (TinkerScene)
+    this.parent?.removeChild(this);
+  }
 }
