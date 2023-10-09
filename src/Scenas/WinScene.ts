@@ -37,17 +37,17 @@ export class WinScene extends Container {
       this.addChild(t);
   
       const boton = new Sprite(Texture.from('boton'));
-      boton.position.set(1750, 58);
+      boton.position.set(1730, 58);
       boton.scale.set(0.2);
       this.addChild(boton);
   
       window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === Keyboard.KEYS.ENTER) {
           const startScene = new StartScene(this.app);
-          this.parent?.addChild(startScene); // Agrega StartScene al contenedor actual
+          this.app.stage.addChild(startScene); // Agrega StartScene al contenedor actual
       
           // Limpia la escena actual (Final)
-          this.parent?.removeChild(this);
+          this.app.stage.removeChild(this);
         }
       });
     }

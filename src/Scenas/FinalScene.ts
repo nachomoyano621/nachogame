@@ -47,10 +47,10 @@ export class FinalScene extends Container {
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === Keyboard.KEYS.ENTER) {
       const startScene = new StartScene(this.app);
-      this.parent?.addChild(startScene); // Agrega StartScene al contenedor actual
+      this.app.stage.addChild(startScene); // Agrega StartScene al contenedor actual
   
       // Limpia la escena actual (Final)
-      this.parent?.removeChild(this);
+      this.app.stage.removeChild(this);
     }
   });
   

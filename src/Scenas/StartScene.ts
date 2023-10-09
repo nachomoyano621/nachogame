@@ -55,7 +55,7 @@ export class StartScene extends Container {
     this.app.stage.addChild(tinkerScene);
 
     // Limpia la escena actual (Inicio)
-    this.parent?.removeChild(this);
+    this.app.stage.removeChild(this);
 
     // Agrega un bucle de juego a la nueva escena
     this.app.ticker.add(() => {

@@ -3,14 +3,17 @@ import { sound } from "@pixi/sound";
 import { Player } from "../game/Player";
 import { GlowFilter } from "@pixi/filter-glow";
 import { DinoConPatineta } from "../Componentes/DinoConPatineta";
-import { GAME_DELTA_TIME } from '../index';
 
 
 
 import { Mosquito } from "../Componentes/Mosquito";
 import { FinalScene } from "./FinalScene";
 import { WinScene } from "./WinScene";
-// import { StartScene } from "./StartScene";
+// Importa la clase Application de Pixi.js
+import { Application as PixiApplication } from "pixi.js";
+
+// Importa el tiempo delta (deltaTime) desde la clase PixiApplication
+import { Ticker } from "pixi.js";
 
 export class TinkerScene extends Container {
   private playerHombre: Player;
@@ -40,7 +43,7 @@ export class TinkerScene extends Container {
   app: Application;
 
 
-  constructor(app: Application) {
+  constructor(app: PixiApplication) {
     super();
 
     this.app = app;
@@ -190,10 +193,10 @@ this.world.addChild(this.playerHombre);
     if (!this.juegoEnCurso) {
       return; // Si el juego no está en curso, no hagas actualizaciones adicionales.
     }
-  
+    const deltaTime = Ticker.shared.elapsedMS;
     // Actualiza el temporizador de aparición de dinos
-    this.dinoSpawnTimer += GAME_DELTA_TIME;
-    this.accumulatedMosquitoTime += GAME_DELTA_TIME;
+    this.dinoSpawnTimer += deltaTime;
+    this.accumulatedMosquitoTime += deltaTime;
   
     if (this.dinoSpawnTimer >= this.dinoSpawnInterval) {
       this.dinoSpawnTimer = 0; // Reinicia el temporizador
@@ -203,7 +206,7 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de las monedas y verifica la colisión con el jugador
     for (let i = this.monedas.length - 1; i >= 0; i--) {
       const moneda = this.monedas[i];
-      moneda.x += this.monedasSpeed * (GAME_DELTA_TIME / 1000);
+      moneda.x += this.monedasSpeed * (deltaTime/ 1000);
   
       // Verificar colisión con el jugador
       const playerBounds = this.playerHombre.getBounds();
@@ -225,14 +228,14 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de los dinos y verifica la colisión con el jugador
     for (let i = this.dinos.length - 1; i >= 0; i--) {
       const dino = this.dinos[i];
-      dino.position.x += dino.getSpeedX() * (GAME_DELTA_TIME / 1000);
-      this.timePassed += GAME_DELTA_TIME;
+      dino.position.x += dino.getSpeedX() * (deltaTime / 1000);
+      this.timePassed += deltaTime;
   
       if (this.timePassed > 2000) {
         this.timePassed = 0;
       }
   
-      this.timePassedMonedas += GAME_DELTA_TIME;
+      this.timePassedMonedas += deltaTime;
       if (this.timePassedMonedas > 4000) {
         this.timePassedMonedas = 0;
         this.spawnMoneda();
@@ -249,7 +252,7 @@ this.world.addChild(this.playerHombre);
       }
     }
   
-    this.playerHombre.update(GAME_DELTA_TIME);
+    this.playerHombre.update(deltaTime);
   
     if (this.playerHombre.x > horizontalLimitRight) {
       this.playerHombre.x = horizontalLimitRight;
@@ -268,7 +271,7 @@ this.world.addChild(this.playerHombre);
     // Actualiza la posición de los mosquitos y verifica la colisión con el jugador
     for (let i = this.mosquitos.length - 1; i >= 0; i--) {
       const mosquito = this.mosquitos[i];
-      mosquito.x -= 200 * (GAME_DELTA_TIME / 1000); // Velocidad horizontal de los mosquitos
+      mosquito.x -= 200 * (deltaTime / 1000); // Velocidad horizontal de los mosquitos
   
       const playerBounds = this.playerHombre.getBounds();
       const mosquitoBounds = mosquito.getBounds();
@@ -284,7 +287,7 @@ this.world.addChild(this.playerHombre);
         this.removeMosquito(mosquito);
       }
       // Actualiza el temporizador de aparición de mosquitos
-      this.accumulatedMosquitoTime += GAME_DELTA_TIME;
+      this.accumulatedMosquitoTime += deltaTime;
 
   // Verifica si ha pasado el tiempo suficiente para crear un nuevo mosquito
   if (this.accumulatedMosquitoTime >= this.mosquitoSpawnInterval) {
@@ -361,7 +364,7 @@ this.world.addChild(this.playerHombre);
     this.app.stage.addChild(finalScene);
   
     // Limpia la escena actual (TinkerScene)
-    this.parent?.removeChild(this);
+    this.app.stage.removeChild(this);
   
     // Detiene el bucle de juego de TinkerScene
     this.app.ticker.remove(this.update, this);
@@ -379,6 +382,6 @@ this.world.addChild(this.playerHombre);
     this.app.stage.addChild(winScene);
   
     // Limpia la escena actual (TinkerScene)
-    this.parent?.removeChild(this);
+    this.app.stage.removeChild(this);
   }
 }

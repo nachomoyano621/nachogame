@@ -5,7 +5,7 @@ import { StartScene } from './Scenas/StartScene'; // Importa StartScene
 
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
-export const GAME_DELTA_TIME = 80;
+
 const app = new Application({
   view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
   resolution: window.devicePixelRatio || 1,
