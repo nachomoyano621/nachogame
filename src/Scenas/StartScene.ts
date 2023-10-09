@@ -23,6 +23,10 @@ export class StartScene extends Container {
 
   // Crear un estilo de texto
   const estiloTexto = new TextStyle({
+    dropShadow: true,
+    dropShadowAngle: 12,
+    dropShadowBlur: 42,
+    dropShadowColor: "#ffffff",
     fill: [
       "#ed0707",
       "#000000"
@@ -45,18 +49,18 @@ export class StartScene extends Container {
     this.addChild(boton)
 
  // Escuchar el evento keydown para la tecla Enter
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === Keyboard.KEYS.ENTER) {
-        const tinkerScene = new TinkerScene();
-        this.app.stage.addChild(tinkerScene);
+ window.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (e.key === Keyboard.KEYS.ENTER) {
+    const tinkerScene = new TinkerScene(this.app);
+    this.app.stage.addChild(tinkerScene);
 
-        // Limpia la escena actual (Inicio)
-        this.parent.removeChild(this);
+    // Limpia la escena actual (Inicio)
+    this.parent?.removeChild(this);
 
-        // Agrega un bucle de juego a la nueva escena
-        this.app.ticker.add(() => {
-          tinkerScene.update();
-        });
+    // Agrega un bucle de juego a la nueva escena
+    this.app.ticker.add(() => {
+      tinkerScene.update(); // No es necesario pasar un argumento aquí
+    });
       }
     });
   }

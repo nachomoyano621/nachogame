@@ -20,6 +20,10 @@ export class FinalScene extends Container {
 
     // Crear un estilo de texto
     const estiloTexto = new TextStyle({
+        dropShadow: true,
+        dropShadowAngle: 12,
+        dropShadowBlur: 42,
+        dropShadowColor: "#ffffff",
       fill: [
         "#ed0707",
         "#000000"
@@ -29,29 +33,28 @@ export class FinalScene extends Container {
     });
 
     const t = new Text("Presiona enter para volver a jugar", estiloTexto);
-    t.position.set(1050, 38);
+    t.position.set(750, 78);
     t.scale.set(0.68);
     this.addChild(t);
 
     const boton = new Sprite(Texture.from('boton'));
-    boton.position.set(1750, 18);
+    boton.position.set(1750, 58);
     boton.scale.set(0.2);
     this.addChild(boton);
 
-    // Escuchar el evento keydown para la tecla Enter
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === Keyboard.KEYS.ENTER) {
-        const startScene = new StartScene(this.app); // Crea una instancia de StartScene
-        this.app.stage.addChild(startScene);
+  // ...
 
-        // Limpia la escena actual (Final)
-        this.parent?.removeChild(this);
-
-        // Agrega un bucle de juego a la nueva escena (StartScene)
-        // this.app.ticker.add(() => {
-        //   startScene.update(); // Llama a la función update sin necesidad de ": void"
-        // });
-      }
-    });
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === Keyboard.KEYS.ENTER) {
+      const startScene = new StartScene(this.app);
+      this.parent?.addChild(startScene); // Agrega StartScene al contenedor actual
+  
+      // Limpia la escena actual (Final)
+      this.parent?.removeChild(this);
+    }
+  });
+  
+  // ...
+  
   }
 }

@@ -1,11 +1,15 @@
-import { Container, Text, TextStyle, Sprite, Texture } from "pixi.js";
+import { Container, Text, TextStyle, Sprite, Texture, Application } from "pixi.js";
 import { sound } from "@pixi/sound";
 import { Player } from "../game/Player";
 import { GlowFilter } from "@pixi/filter-glow";
 import { DinoConPatineta } from "../Componentes/DinoConPatineta";
 import { GAME_DELTA_TIME } from '../index';
 
+
+
 import { Mosquito } from "../Componentes/Mosquito";
+import { FinalScene } from "./FinalScene";
+// import { StartScene } from "./StartScene";
 
 export class TinkerScene extends Container {
   private playerHombre: Player;
@@ -31,12 +35,13 @@ export class TinkerScene extends Container {
   monedaChicaSprite: Sprite;
   
   private timePassedMonedas: number = 0;
+  app: Application;
 
 
-  constructor() {
+  constructor(app: Application) {
     super();
 
-    
+    this.app = app;
   this.dinoSpawnTimer = this.dinoSpawnInterval; // Inicia el temporizador
     this.world = new Container();
     this.addChild(this.world);
@@ -227,6 +232,7 @@ this.world.addChild(this.playerHombre);
       if (playerBounds.intersects(dinoBounds)) {
         // Si hay una colisión con el dino, eliminarlo
         this.removeDino(dino);
+        this.changeToFinalScene();
       }
     }
   
@@ -257,6 +263,7 @@ this.world.addChild(this.playerHombre);
       if (playerBounds.intersects(mosquitoBounds)) {
         // Realiza acciones cuando el jugador colisiona con un mosquito, por ejemplo, eliminar el mosquito.
         this.onMosquitoCollision(mosquito);
+        this.changeToFinalScene();
       }
   
       if (mosquito.x < -mosquito.width) {
@@ -331,6 +338,17 @@ this.world.addChild(this.playerHombre);
   
     // Elimina el mosquito del mundo
     this.world.removeChild(mosquito);
+  }
+  private changeToFinalScene(): void {
+    // Crea una instancia de FinalScene y agrega al escenario
+    const finalScene = new FinalScene(this.app);
+    this.app.stage.addChild(finalScene);
+  
+    // Limpia la escena actual (TinkerScene)
+    this.parent?.removeChild(this);
+  
+    // Detiene el bucle de juego de TinkerScene
+    this.app.ticker.remove(this.update, this);
   }
   
 }
