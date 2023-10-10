@@ -166,7 +166,7 @@ this.world.addChild(this.playerHombre);
   }
 
   private actualizarTextoMonedas(): void {
-    if (this.monedasRecogidas === 2) {
+    if (this.monedasRecogidas === 50) {
       this.changeToWinScene(); // Cambia a la escena de victoria cuando se recogen 2 monedas
     }
     // Verifica si el textoMonedas ya está en el mundo y lo elimina
