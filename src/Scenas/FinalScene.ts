@@ -46,11 +46,17 @@ export class FinalScene extends Container {
 
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === Keyboard.KEYS.ENTER) {
+      
       const startScene = new StartScene(this.app);
       this.app.stage.addChild(startScene); // Agrega StartScene al contenedor actual
+
+      // Eliminar los elementos visuales y recursos específicos de TinkerScene
+    this.removeChildren();
   
       // Limpia la escena actual (Final)
       this.app.stage.removeChild(this);
+      location.reload();
+      
     }
   });
   

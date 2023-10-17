@@ -48,6 +48,7 @@ export class WinScene extends Container {
       
           // Limpia la escena actual (Final)
           this.app.stage.removeChild(this);
+          location.reload();
         }
       });
     }

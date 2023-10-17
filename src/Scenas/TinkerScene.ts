@@ -24,11 +24,12 @@ export class TinkerScene extends Container {
   private world: Container;
   private dinos: DinoConPatineta[] = [];
   private dinoSpawnTimer: number = 0;
-  private dinoSpawnInterval: number = 12000; // Intervalo de aparición de los dinos (en milisegundos)
+  private dinoSpawnInterval: number = 20000; // Intervalo de aparición de los dinos (en milisegundos)
   private mosquitos: Mosquito[] = [];
-  private mosquitoSpawnInterval: number = 15000;
+  private mosquitoSpawnInterval: number = 10000;
   private accumulatedMosquitoTime: number = 0;
   private juegoEnCurso: boolean = true;
+  
 
 
 
@@ -196,7 +197,7 @@ this.world.addChild(this.playerHombre);
     const deltaTime = Ticker.shared.elapsedMS;
     // Actualiza el temporizador de aparición de dinos
     this.dinoSpawnTimer += deltaTime;
-    this.accumulatedMosquitoTime += deltaTime;
+
   
     if (this.dinoSpawnTimer >= this.dinoSpawnInterval) {
       this.dinoSpawnTimer = 0; // Reinicia el temporizador
@@ -289,11 +290,11 @@ this.world.addChild(this.playerHombre);
       // Actualiza el temporizador de aparición de mosquitos
       this.accumulatedMosquitoTime += deltaTime;
 
-  // Verifica si ha pasado el tiempo suficiente para crear un nuevo mosquito
-  if (this.accumulatedMosquitoTime >= this.mosquitoSpawnInterval) {
-    this.spawnMosquito(); // Aparece un nuevo mosquito
-    this.accumulatedMosquitoTime -= this.mosquitoSpawnInterval; // Resta el intervalo de tiempo
-  }
+      // Verifica si ha pasado el tiempo suficiente para crear un nuevo mosquito
+      if (this.accumulatedMosquitoTime >= this.mosquitoSpawnInterval) {
+        this.spawnMosquito();
+        this.accumulatedMosquitoTime -= this.mosquitoSpawnInterval; // Asegúrate de restar el intervalo de tiempo
+    }
     }
   
     this.updateMonedasColision();
@@ -349,25 +350,34 @@ this.world.addChild(this.playerHombre);
     // Encuentra el índice del mosquito en el arreglo y elimínalo
     const index = this.mosquitos.indexOf(mosquito);
     if (index !== -1) {
-      this.mosquitos.splice(index, 1); // Elimina el mosquito del arreglo
+        this.mosquitos.splice(index, 1); // Elimina el mosquito del arreglo
     }
-  
+
     // Elimina el mosquito del mundo
     this.world.removeChild(mosquito);
-  }
+
+    // Reinicia el tiempo acumulado para que el próximo mosquito aparezca según el intervalo
+    this.accumulatedMosquitoTime = 0;
+}
   private changeToFinalScene(): void {
     this.juegoEnCurso = false;
     const sndCancion = sound.find("cancion");
     sndCancion.stop(); 
-    // Crea una instancia de FinalScene y agrega al escenario
+  
+      
+    // Eliminar los elementos visuales y recursos específicos de TinkerScene
+    this.removeChildren();
+  
+    // Detener el bucle de juego de TinkerScene
+    this.app.ticker.remove(this.update, this);
+  
+    // Crear una instancia de FinalScene y agregarla al escenario
     const finalScene = new FinalScene(this.app);
     this.app.stage.addChild(finalScene);
   
-    // Limpia la escena actual (TinkerScene)
+    // Eliminar la instancia de TinkerScene del escenario
     this.app.stage.removeChild(this);
-  
-    // Detiene el bucle de juego de TinkerScene
-    this.app.ticker.remove(this.update, this);
+    
   }
   
 
@@ -376,6 +386,9 @@ this.world.addChild(this.playerHombre);
     this.juegoEnCurso = false;
     const sndCancion = sound.find("cancion");
   sndCancion.stop(); 
+
+  // Eliminar los elementos visuales y recursos específicos de TinkerScene
+  this.removeChildren();
   
     // Crea una instancia de WinScene y agrégala al escenario
     const winScene = new WinScene(this.app);

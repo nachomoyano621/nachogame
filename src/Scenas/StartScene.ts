@@ -57,9 +57,12 @@ export class StartScene extends Container {
     // Limpia la escena actual (Inicio)
     this.app.stage.removeChild(this);
 
+    // Eliminar los elementos visuales y recursos específicos de TinkerScene
+    this.removeChildren();
+
     // Agrega un bucle de juego a la nueva escena
     this.app.ticker.add(() => {
-      tinkerScene.update(); // No es necesario pasar un argumento aquí
+      tinkerScene.update(); 
     });
       }
     });
