@@ -1,10 +1,17 @@
-import { Application, Loader} from 'pixi.js';
-import { assets } from './Componentes/assets';
-import { Keyboard } from './utils/Keyboard';
-import { StartScene } from './Scenas/StartScene'; // Importa StartScene
-
-export const WIDTH = 1920;
-export const HEIGHT = 1080;
+import * as PIXI from "pixi.js";
+import { Application, Graphics, Loader, Text } from "pixi.js";
+import "@pixi/sound";
+import { assets } from "./Componentes/assets";
+import { Art, buildArt } from "./art/ProceduralArt";
+import { WArt, buildWorldArt } from "./art/WorldArt";
+import { WORLD_ENEMIES } from "./game/worldEnemies";
+import { HEIGHT, WIDTH } from "./config";
+import { AudioCtl } from "./core/AudioCtl";
+import { SceneManager } from "./core/SceneManager";
+import { StartScene } from "./Scenas/StartScene";
+import { runDemo } from "./demo/Demo";
+import { style } from "./ui/styles";
+import { Keyboard } from "./utils/Keyboard";
 
 const app = new Application({
   view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
@@ -17,33 +24,62 @@ const app = new Application({
 
 Keyboard.initialize();
 
-window.addEventListener("resize", ()=>{//Evento para centrar la imagen cuando se cambia el tamaño de la pantalla
-	const scaleX = window.innerWidth / app.screen.width;
-	const scaleY = window.innerHeight / app.screen.height;
-	const scale = Math.min(scaleX, scaleY);//escala para calcular la imagen con el tamaño de pantalla que se tiene
+// Escala el canvas para que entre en la ventana manteniendo la relación 16:9 (letterbox).
+function resize(): void {
+  const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT);
+  const w = Math.round(WIDTH * scale);
+  const h = Math.round(HEIGHT * scale);
+  app.view.style.width = `${w}px`;
+  app.view.style.height = `${h}px`;
+  app.view.style.marginLeft = `${Math.floor((window.innerWidth - w) / 2)}px`;
+  app.view.style.marginTop = `${Math.floor((window.innerHeight - h) / 2)}px`;
+}
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", resize);
+resize();
 
-	const gameWidth = Math.round(app.screen.width * scale);
-	const gameHeight = Math.round(app.screen.height * scale);
-
-	const marginHorizontal = Math.floor((window.innerWidth - gameWidth) / 2);
-	const marginVertical = Math.floor((window.innerHeight - gameHeight) / 2);//modifica los margenes (los divide por dos para poner la mitad de cada margen en cada lado)
-
-	app.view.style.width = gameWidth + "px";
-	app.view.style.height = gameHeight + "px";//cambia la pantalla con la escala tomada
-
-	app.view.style.marginLeft = marginHorizontal + "px";
-	app.view.style.marginRight = marginHorizontal + "px";//cambia la pantalla con los margenes tomados
-
-	app.view.style.marginTop = marginVertical + "px";
-	app.view.style.marginBottom = marginVertical + "px";
-});
-window.dispatchEvent(new Event("resize"));
+// Pantalla de carga
+const loading = new Graphics();
+const loadingText = new Text("CARGANDO...", style({ fontSize: 48 }));
+loadingText.anchor.set(0.5);
+loadingText.position.set(WIDTH / 2, HEIGHT / 2 - 60);
+app.stage.addChild(loading, loadingText);
+function drawProgress(p: number): void {
+  loading.clear();
+  loading.lineStyle(4, 0xffffff);
+  loading.drawRoundedRect(WIDTH / 2 - 400, HEIGHT / 2, 800, 40, 20);
+  loading.lineStyle(0);
+  loading.beginFill(0xffc107);
+  loading.drawRoundedRect(WIDTH / 2 - 394, HEIGHT / 2 + 6, Math.max(28, 788 * p), 28, 14);
+  loading.endFill();
+}
+drawProgress(0);
 
 Loader.shared.add(assets);
+Loader.shared.onProgress.add((l) => drawProgress(l.progress / 100));
+Loader.shared.load(() => {
+  app.stage.removeChild(loading, loadingText);
+  loading.destroy();
+  loadingText.destroy();
 
-Loader.shared.onComplete.add(() => {
-	const startScene = new StartScene(app); // Pasa la instancia de 'app' a 'StartScene'
-	app.stage.addChild(startScene);
-  });
+  buildArt(app.renderer);
+  buildWorldArt(app.renderer);
+  AudioCtl.init();
+  SceneManager.init(app);
+  SceneManager.change(new StartScene());
 
-Loader.shared.load();
+  // Modo demo automático: ?demo (y ?demo&record para grabar el video)
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("demo")) {
+    void runDemo(app, params.has("record"));
+  }
+});
+
+// Mute global con M en cualquier pantalla
+Keyboard.down.on("KeyM", () => AudioCtl.toggle());
+
+// Acceso para pruebas en local (no se incluye en el build de producción)
+declare const process: { env: { NODE_ENV?: string } };
+if (process.env.NODE_ENV !== "production") {
+  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES };
+}

@@ -1,56 +1,59 @@
-// Button.ts
-import { Container, Sprite, Texture } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
+import { Sfx } from "../core/Sfx";
+import { style } from "./styles";
 
-export class Button extends Container {
-  private def: Texture;
-  private down: Texture;
-  private over: Texture;
+export interface ButtonOpts {
+  width?: number;
+  height?: number;
+  color?: number;
+  fontSize?: number;
+}
 
-  private spr: Sprite;
-  private isPressed: boolean = false;
+/** Botón con texto, hover y click/tap. */
+export class TextButton extends Container {
+  private readonly bg = new Graphics();
+  private readonly label: Text;
+  private readonly w: number;
+  private readonly h: number;
+  private readonly color: number;
 
-  constructor(def: Texture, down: Texture, over: Texture) {
+  constructor(text: string, onClick: () => void, o: ButtonOpts = {}) {
     super();
+    this.w = o.width ?? 460;
+    this.h = o.height ?? 92;
+    this.color = o.color ?? 0xffb300;
+    this.addChild(this.bg);
+    this.label = new Text(text, style({ fontSize: o.fontSize ?? 38, strokeThickness: 7 }));
+    this.label.anchor.set(0.5);
+    this.addChild(this.label);
+    this.draw(false);
 
-    this.def = def;
-    this.down = down;
-    this.over = over;
-
-    this.spr = Sprite.from(def);
-    this.spr.anchor.set(0.5);
-    this.addChild(this.spr);
-    this.spr.interactive = true;
-
-    // Utiliza el evento 'pointerdown' para cambiar al estado presionado
-    this.spr.on("pointerdown", this.onMouseDown, this);
-    this.spr.on("pointerup", this.onMouseUp, this);
-    this.spr.on("pointerupoutside", this.onMouseUp, this);
-    this.spr.on("pointerover", this.onMouseOver, this);
-    this.spr.on("pointerout", this.onMouseOut, this);
+    this.interactive = true;
+    this.cursor = "pointer";
+    this.on("pointerover", () => this.draw(true));
+    this.on("pointerout", () => this.draw(false));
+    this.on("pointertap", () => {
+      Sfx.click();
+      onClick();
+    });
   }
 
-  private onMouseDown(): void {
-    if (!this.isPressed) {
-      this.isPressed = true;
-      this.spr.texture = this.down;
+  private draw(hover: boolean): void {
+    const { w, h } = this;
+    this.bg.clear();
+    this.bg.beginFill(0x000000, 0.35);
+    this.bg.drawRoundedRect(-w / 2 + 6, -h / 2 + 8, w, h, 24);
+    this.bg.endFill();
+    this.bg.lineStyle(5, 0xffffff, hover ? 1 : 0.85);
+    this.bg.beginFill(hover ? 0xffffff : this.color, 1);
+    this.bg.drawRoundedRect(-w / 2, -h / 2, w, h, 24);
+    this.bg.endFill();
+    if (hover) {
+      this.bg.beginFill(this.color, 0.85);
+      this.bg.lineStyle(0);
+      this.bg.drawRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 20);
+      this.bg.endFill();
     }
-  }
-
-  private onMouseUp(): void {
-    if (this.isPressed) {
-      this.isPressed = false;
-      this.emit("clickk");
-      this.spr.texture = this.over;
-    }
-  }
-
-  private onMouseOver(): void {
-    // No cambiamos el estado al pasar el mouse sobre él
-  }
-
-  private onMouseOut(): void {
-    if (!this.isPressed) {
-      this.spr.texture = this.def;
-    }
+    this.scale.set(hover ? 1.05 : 1);
   }
 }

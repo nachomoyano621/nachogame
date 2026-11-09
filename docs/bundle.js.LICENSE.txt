@@ -45,14 +45,6 @@ object-assign
  */
 
 /*!
- * @pixi/filter-glow - v4.2.0
- * Compiled Fri, 05 Aug 2022 19:53:35 UTC
- *
- * @pixi/filter-glow is licensed under the MIT License.
- * http://www.opensource.org/licenses/mit-license
- */
-
-/*!
  * @pixi/math - v6.5.9
  * Compiled Wed, 25 Jan 2023 05:01:45 UTC
  *
@@ -105,15 +97,6 @@ object-assign
  * Compiled Wed, 25 Jan 2023 05:01:45 UTC
  *
  * @pixi/settings is licensed under the MIT License.
- * http://www.opensource.org/licenses/mit-license
- */
-
-/*!
- * @pixi/sound - v4.4.0
- * https://github.com/pixijs/pixi-sound
- * Compiled Thu, 01 Jun 2023 13:56:20 UTC
- *
- * @pixi/sound is licensed under the MIT license.
  * http://www.opensource.org/licenses/mit-license
  */
 
