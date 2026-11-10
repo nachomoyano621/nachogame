@@ -1,5 +1,5 @@
 import { AnimatedSprite, Container, Graphics, Text } from "pixi.js";
-import { DIFFICULTIES, HEIGHT, WIDTH } from "../config";
+import { DIFFICULTIES, HEIGHT, WIDTH, WORLDS } from "../config";
 import { Background, LEVEL_NAMES } from "../game/Background";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
@@ -264,7 +264,7 @@ export class StartScene extends Container implements IScene {
 
   /** Cambia el mundo que se ve de fondo en el menú. */
   private showWorld(i: number): void {
-    this.worldIdx = i % 6;
+    this.worldIdx = i % WORLDS;
     this.bg.setTheme(this.worldIdx, 1.2);
     this.worldName.text = `MUNDO ${this.worldIdx + 1}: ${LEVEL_NAMES[this.worldIdx]}`;
   }

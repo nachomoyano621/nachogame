@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { GameStats } from "../game/types";
-import { getDifficulty } from "../config";
+import { WORLDS, getDifficulty } from "../config";
 import { getCharacter } from "../game/characters";
 import { style } from "./styles";
 
@@ -24,8 +24,12 @@ export class StatsPanel extends Container {
     bg.endFill();
     this.addChild(bg);
 
-    const who = new Text(`${getCharacter(stats.characterId).name} · ${getDifficulty(stats.difficulty).name}${stats.bossDefeated ? " · ¡DINO-X DERROTADO!" : ""}`, style({ fontSize: 26, fill: "#b0bec5", strokeThickness: 0 }));
+    const who = new Text(
+      `${getCharacter(stats.characterId).name} · ${getDifficulty(stats.difficulty).name} · JEFES VENCIDOS: ${stats.bosses}/${WORLDS + 1}${stats.bossDefeated ? " · ¡DINO-X DERROTADO!" : ""}`,
+      style({ fontSize: 26, fill: "#b0bec5", strokeThickness: 0 }),
+    );
     who.anchor.set(0.5, 0);
+    who.scale.set(Math.min(1, (width - 50) / Math.max(1, who.width))); // que entre en el panel
     who.y = -h / 2 + 18;
     this.addChild(who);
 
@@ -35,8 +39,8 @@ export class StatsPanel extends Container {
     this.addChild(score);
 
     const cols: [string, string][] = [
-      ["MONEDAS", `${stats.coins}`],
-      ["NIVEL", `${stats.level}`],
+      ["MONEDAS (TOTAL)", `${stats.coins}`],
+      ["MUNDO", stats.reachedBoss ? "JEFE" : `${stats.level}/${WORLDS}`],
       ["APLASTADOS", `${stats.stomps}`],
       ["TIEMPO", formatTime(stats.time)],
     ];

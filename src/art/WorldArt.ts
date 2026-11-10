@@ -11,6 +11,137 @@ export interface WorldArtBank {
   alien: Texture[];
   ufo: Texture[];
   skull: Texture;
+  brickMonster: Texture[];
+  brickCopter: Texture[];
+  brickGolem: Texture[];
+  brickShot: Texture;
+  bricksGround: Texture;
+}
+
+// ------------------------------------------------------------------ mundo de bloques
+
+/** Ladrillo de juguete: bloque con sombra y "botoncitos" arriba. */
+export function drawBrick(g: Graphics, x: number, y: number, w: number, h: number, color: number, studs = true): void {
+  const dark = shade(color, 0.72);
+  const light = shade(color, 1.18);
+  if (studs) {
+    const n = Math.max(1, Math.round(w / 34));
+    const step = w / n;
+    for (let i = 0; i < n; i++) {
+      const sx = x + step * (i + 0.5);
+      g.beginFill(dark);
+      g.drawRoundedRect(sx - step * 0.28, y - 9, step * 0.56, 11, 4);
+      g.endFill();
+      g.beginFill(light);
+      g.drawEllipse(sx, y - 9, step * 0.28, 4.5);
+      g.endFill();
+    }
+  }
+  g.beginFill(dark);
+  g.drawRoundedRect(x, y, w, h, 6);
+  g.endFill();
+  g.beginFill(color);
+  g.drawRoundedRect(x, y, w, h - 6, 6);
+  g.endFill();
+  g.beginFill(0xffffff, 0.22);
+  g.drawRoundedRect(x + 4, y + 3, w - 8, 5, 3);
+  g.endFill();
+}
+
+export function shade(color: number, k: number): number {
+  const c = (s: number): number => Math.max(0, Math.min(255, Math.round(((color >> s) & 0xff) * k)));
+  return (c(16) << 16) | (c(8) << 8) | c(0);
+}
+
+function blockEyes(g: Graphics, x1: number, x2: number, y: number, r: number, angry: boolean): void {
+  g.beginFill(0xffffff);
+  g.drawRoundedRect(x1 - r, y - r, r * 2, r * 2, 3);
+  g.drawRoundedRect(x2 - r, y - r, r * 2, r * 2, 3);
+  g.endFill();
+  g.beginFill(0x111111);
+  g.drawRect(x1 - r * 0.9, y - r * 0.3, r * 0.9, r * 1.1);
+  g.drawRect(x2 - r * 0.9, y - r * 0.3, r * 0.9, r * 1.1);
+  g.endFill();
+  if (angry) {
+    g.lineStyle({ width: 4, color: 0x111111, ...ROUND });
+    g.moveTo(x1 - r * 1.2, y - r * 1.5);
+    g.lineTo(x1 + r, y - r * 0.9);
+    g.moveTo(x2 + r * 1.2, y - r * 1.5);
+    g.lineTo(x2 - r, y - r * 0.9);
+    g.lineStyle(0);
+  }
+}
+
+function drawBrickMonster(g: Graphics, p: number): void {
+  // patitas
+  drawBrick(g, p ? 22 : 30, 98, 26, 20, 0x424242, false);
+  drawBrick(g, p ? 78 : 68, 98, 26, 20, 0x424242, false);
+  drawBrick(g, 12, 58, 100, 42, 0xe53935);
+  drawBrick(g, 26, 22, 72, 38, 0xd32f2f);
+  blockEyes(g, 48, 76, 40, 8, true);
+  g.beginFill(0x111111);
+  g.drawRect(46, 76, 34, 6);
+  g.endFill();
+}
+
+function drawBrickCopter(g: Graphics, p: number): void {
+  // hélice
+  g.beginFill(0x616161);
+  g.drawRect(66, 14, 8, 26);
+  g.endFill();
+  g.beginFill(0x90a4ae);
+  if (p) {
+    g.drawRoundedRect(14, 8, 112, 10, 5);
+  } else {
+    g.drawRoundedRect(46, 8, 48, 10, 5);
+  }
+  g.endFill();
+  drawBrick(g, 18, 46, 104, 46, 0xfdd835);
+  blockEyes(g, 52, 88, 66, 8, false);
+  g.beginFill(0x2979ff);
+  g.drawRoundedRect(8, 76, 20, 14, 4);
+  g.drawRoundedRect(112, 76, 20, 14, 4);
+  g.endFill();
+}
+
+function drawBrickGolem(g: Graphics, p: number): void {
+  // piernas
+  drawBrick(g, p ? 54 : 62, 196, 44, 62, 0x1e88e5, false);
+  drawBrick(g, p ? 130 : 122, 196, 44, 62, 0x1e88e5, false);
+  // brazos
+  const a = p ? 8 : 0;
+  drawBrick(g, 2, 104 + a, 42, 84, 0x43a047);
+  drawBrick(g, 184, 104 - a, 42, 84, 0x43a047);
+  // cuerpo
+  drawBrick(g, 40, 100, 148, 100, 0xe53935);
+  g.beginFill(0xfdd835);
+  g.drawCircle(114, 150, 16);
+  g.endFill();
+  // cabeza
+  drawBrick(g, 66, 30, 96, 70, 0xfdd835);
+  blockEyes(g, 96, 132, 62, 11, true);
+  g.beginFill(0x111111);
+  g.drawRect(92, 84, 44, 7);
+  g.endFill();
+}
+
+function drawBrickShot(g: Graphics): void {
+  drawBrick(g, -22, -10, 44, 22, 0xff6d00);
+}
+
+function drawBricksGround(g: Graphics): void {
+  const colors = [0xe53935, 0xfdd835, 0x1e88e5, 0x43a047, 0xff6d00, 0x8e24aa];
+  g.beginFill(0x37474f);
+  g.drawRect(0, 0, 256, 112);
+  g.endFill();
+  let k = 0;
+  for (let row = 0; row < 4; row++) {
+    const y = 10 + row * 26;
+    const off = row % 2 === 0 ? 0 : -32;
+    for (let x = off; x < 256; x += 64) {
+      drawBrick(g, x + 1, y, 62, 25, colors[k++ % colors.length], row === 0);
+    }
+  }
 }
 
 export const WArt = {} as WorldArtBank;
@@ -384,4 +515,9 @@ export function buildWorldArt(r: AbstractRenderer): void {
   WArt.alien = two(drawAlien, new Rectangle(0, -6, 110, 154));
   WArt.ufo = two(drawUfo, new Rectangle(0, 8, 180, 124));
   WArt.skull = bake(drawSkull, new Rectangle(-30, -30, 60, 56));
+  WArt.brickMonster = two(drawBrickMonster, new Rectangle(0, 8, 124, 112));
+  WArt.brickCopter = two(drawBrickCopter, new Rectangle(0, 0, 140, 96));
+  WArt.brickGolem = two(drawBrickGolem, new Rectangle(0, 16, 228, 244));
+  WArt.brickShot = bake(drawBrickShot, new Rectangle(-24, -22, 48, 36));
+  WArt.bricksGround = bake(drawBricksGround, new Rectangle(0, 0, 256, 112));
 }

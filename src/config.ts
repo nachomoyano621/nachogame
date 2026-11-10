@@ -4,9 +4,10 @@ export const HEIGHT = 1080;
 /** Línea del piso: los pies de los personajes apoyan acá. */
 export const GROUND_Y = 972;
 
-export const COINS_TO_WIN = 50;
-export const COINS_PER_LEVEL = 8;
-export const MAX_LEVEL = 6;
+/** Monedas que hay que juntar EN CADA MUNDO para que se abra el portal (el contador vuelve a 0). */
+export const COINS_PER_WORLD = 50;
+/** Cantidad de mundos; desde el último, el portal lleva al laboratorio del jefe final. */
+export const WORLDS = 7;
 export const MAX_LIVES = 6;
 
 /** Velocidad base a la que "corre" el mundo (px/s). */

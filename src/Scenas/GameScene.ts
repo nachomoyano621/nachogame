@@ -1,15 +1,14 @@
 import { Container, Graphics, Rectangle } from "pixi.js";
 import {
   BASE_WORLD_SPEED,
-  COINS_PER_LEVEL,
-  COINS_TO_WIN,
+  COINS_PER_WORLD,
   Difficulty,
   GROUND_Y,
   JUMP_KEYS,
   THROW_KEYS,
-  MAX_LEVEL,
   MAX_LIVES,
   WIDTH,
+  WORLDS,
   rand,
 } from "../config";
 import { AudioCtl } from "../core/AudioCtl";
@@ -17,7 +16,7 @@ import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { Background, LEVEL_NAMES } from "../game/Background";
-import { Boss, BossCtx } from "../game/Boss";
+import { Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
 import { CharacterDef } from "../game/characters";
 import { Effects } from "../game/Effects";
 import { Bat, Boulder, DinoSkater, Enemy, EnemyCtx, Meteor, Mosasaur, MosquitoEnemy, Rex } from "../game/enemies";
@@ -35,7 +34,7 @@ import { WinScene } from "./WinScene";
 
 type State = "playing" | "paused" | "dying" | "won" | "done";
 
-const MAGNET_TIME = 9;
+const MAGNET_TIME = 6;
 const X2_TIME = 9;
 const SHIELD_TIME = 14;
 
@@ -45,13 +44,14 @@ const LEVEL_MESSAGES: Record<number, string> = {
   4: "Murciélagos y serpientes en la oscuridad",
   5: "Salamandras de fuego, bolas de lava y el REX",
   6: "¡Aliens, OVNIs y lluvia de meteoritos!",
+  7: "Bloquecitos saltarines, helibloques y lluvia de ladrillos",
 };
 
 /** Enemigos a los que el cráneo no les hace nada. */
-const SKULL_PROOF = new Set(["roca", "meteorito", "lava", "mosasaurio", "rex", "ácido", "onda"]);
+const SKULL_PROOF = new Set(["roca", "meteorito", "ladrillazo", "lava", "mosasaurio", "rex", "onda", ...Object.values(SHOTS).map((s) => s.label)]);
 
 /** Índice del escenario del laboratorio en Background. */
-const LAB_THEME = 6;
+const LAB_THEME = WORLDS;
 
 export class GameScene extends Container implements IScene {
   /** Pausar solo al perder el foco de la ventana (se desactiva en la demo). */
@@ -77,12 +77,22 @@ export class GameScene extends Container implements IScene {
   private skullHintShown = false;
   private boss: Boss | null = null;
   private portal: Portal | null = null;
+  /** Se venció al jefe FINAL (DINO-X). */
   private bossDefeated = false;
+  /** Se venció al jefe del mundo actual (se reinicia en cada mundo). */
+  private worldBossBeaten = false;
+  /** Llegó al laboratorio del jefe final. */
+  private finalReached = false;
+  /** Jefes vencidos en toda la partida. */
+  private bossesBeaten = 0;
 
   private state: State = "playing";
   private lives: number;
   private readonly startLives: number;
+  /** Monedas del mundo actual (vuelve a 0 al pasar por el portal). */
   private coinsCollected = 0;
+  /** Monedas de toda la partida (para las estadísticas finales). */
+  private totalCoins = 0;
   private score = 0;
   private stomps = 0;
   private elapsed = 0;
@@ -136,8 +146,8 @@ export class GameScene extends Container implements IScene {
       this.world.addChild(this.debugG);
     }
 
-    this.hud.showBanner(`NIVEL 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
-    this.hud.showHint(`Juntá ${COINS_TO_WIN} monedas y vencé al jefe final\nSaltá ENCIMA de los monstruos para aplastarlos · ¡Esquivá rocas, fuego y medusas!`, 7);
+    this.hud.showBanner(`MUNDO 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
+    this.hud.showHint(`Juntá ${COINS_PER_WORLD} monedas en cada mundo para abrir el PORTAL · al final te espera el jefe\nSaltá ENCIMA de los monstruos para aplastarlos · ¡Esquivá rocas, fuego y medusas!`, 7);
 
     Keyboard.down.on("key", this.onKeyDown, this);
     Keyboard.up.on("key", this.onKeyUp, this);
@@ -284,10 +294,10 @@ export class GameScene extends Container implements IScene {
     this.powerTimer -= dt;
     if (this.powerTimer <= 0) {
       this.spawnPowerUp();
-      this.powerTimer = this.boss ? rand(7, 10) : rand(10, 16);
+      this.powerTimer = this.boss ? rand(7, 10) : rand(13, 19);
     }
-    if (this.boss) {
-      return; // durante el jefe sólo aparecen power-ups
+    if (this.boss || this.portal || this.coinsCollected >= COINS_PER_WORLD) {
+      return; // durante el jefe y con el portal abierto: sin monstruos ni monedas (sólo power-ups)
     }
     // desierto: cráneos para agarrar y lanzar
     if (this.level === 2 && !this.carrying && this.skulls.length === 0) {
@@ -305,10 +315,11 @@ export class GameScene extends Container implements IScene {
     this.coinTimer -= dt;
     if (this.coinTimer <= 0) {
       this.spawnCoinPattern();
-      this.coinTimer = rand(2.4, 3.6);
+      this.coinTimer = rand(2.9, 4.3);
     }
     // lluvia de meteoritos: en el planeta alienígena (y en el volcán si es DIFÍCIL)
-    if (this.level === 6 || (this.level === 5 && this.diff.id === "dificil")) {
+    // (en el mundo de bloques, en vez de meteoritos llueven ladrillos)
+    if (this.level === 6 || this.level === 7 || (this.level === 5 && this.diff.id === "dificil")) {
       this.meteorTimer -= dt;
       if (this.meteorTimer <= 0) {
         this.spawnMeteors();
@@ -346,8 +357,11 @@ export class GameScene extends Container implements IScene {
         pool.push([W.salamander, 3], [() => W.lava(Math.min(WIDTH - 80, this.player.x + rand(300, 900))), 2.2]);
         if (!alive("rex")) pool.push([() => new Rex(), 1]);
         break;
-      default: // Planeta alienígena
+      case 6: // Planeta alienígena
         pool.push([W.alien, 3], [W.ufo, 2.2]);
+        break;
+      default: // Mundo de bloques
+        pool.push([W.bricky, 3], [W.copter, 2.2]);
         break;
     }
 
@@ -366,7 +380,8 @@ export class GameScene extends Container implements IScene {
   private spawnMeteors(): void {
     const count = this.level >= 5 && Math.random() < 0.35 ? 3 : this.level >= 3 && Math.random() < 0.3 ? 2 : 1;
     for (let i = 0; i < count; i++) {
-      this.addEnemy(new Meteor(Math.min(WIDTH - 60, this.player.x + rand(250, 900) + i * 320)));
+      const x = Math.min(WIDTH - 60, this.player.x + rand(250, 900) + i * 320);
+      this.addEnemy(this.level === 7 ? new Meteor(x, WArt.brickShot, "ladrillazo") : new Meteor(x));
     }
   }
 
@@ -375,13 +390,13 @@ export class GameScene extends Container implements IScene {
     const pts: [number, number][] = [];
     const r = Math.random();
     if (r < 0.28) {
-      for (let i = 0; i < 5; i++) pts.push([x0 + i * 70, GROUND_Y - 45]);
+      for (let i = 0; i < 4; i++) pts.push([x0 + i * 70, GROUND_Y - 45]);
     } else if (r < 0.58) {
-      for (let i = 0; i < 7; i++) pts.push([x0 + i * 65, GROUND_Y - 50 - Math.sin((i / 6) * Math.PI) * 260]);
+      for (let i = 0; i < 6; i++) pts.push([x0 + i * 70, GROUND_Y - 50 - Math.sin((i / 5) * Math.PI) * 260]);
     } else if (r < 0.8) {
       for (let i = 0; i < 4; i++) pts.push([x0 + i * 70, GROUND_Y - 360]);
     } else {
-      for (let i = 0; i < 6; i++) pts.push([x0 + i * 75, GROUND_Y - (i % 2 === 0 ? 60 : 210)]);
+      for (let i = 0; i < 5; i++) pts.push([x0 + i * 75, GROUND_Y - (i % 2 === 0 ? 60 : 210)]);
     }
     for (const [x, y] of pts) {
       const c = new Coin(x, y);
@@ -451,10 +466,15 @@ export class GameScene extends Container implements IScene {
     }
     boss.update(dt, this.ctx());
     if (boss.done) {
+      const final = boss.cfg.final;
       boss.destroy({ children: true });
       this.boss = null;
       this.hud.hideBoss();
-      this.win();
+      if (final) {
+        this.win();
+      } else {
+        this.openPortal(); // jefe del mundo vencido: portal sin enemigos
+      }
       return;
     }
     if (this.state !== "playing" || boss.dying) {
@@ -487,16 +507,24 @@ export class GameScene extends Container implements IScene {
         const dx = cx - c.x;
         const dy = cy - c.y;
         const d = Math.hypot(dx, dy);
-        if (d < 560 && d > 1) {
-          const pull = 1300 * dt;
+        if (d < 380 && d > 1) {
+          const pull = 850 * dt;
           c.x += (dx / d) * Math.min(pull, d);
           c.y += (dy / d) * Math.min(pull, d);
         }
       }
       if (this.state === "playing" && intersects(pb, c.getHitbox())) {
+        // Ojo: la moneda 50 hace aparecer al jefe, que limpia TODAS las monedas (this.coins pasa a ser otro array).
+        // Por eso la sacamos de la lista antes, y si la lista cambió cortamos el recorrido.
+        const list = this.coins;
+        list.splice(i, 1);
         this.collectCoin(c);
-        c.destroy();
-        this.coins.splice(i, 1);
+        if (!c.destroyed) {
+          c.destroy();
+        }
+        if (this.coins !== list) {
+          break;
+        }
       } else if (c.x < -60) {
         c.destroy();
         this.coins.splice(i, 1);
@@ -713,29 +741,34 @@ export class GameScene extends Container implements IScene {
   }
 
   private collectCoin(c: Coin): void {
-    if (this.coinsCollected >= COINS_TO_WIN) {
-      return;
+    if (this.coinsCollected >= COINS_PER_WORLD) {
+      return; // el portal ya está abierto: las monedas de más no cuentan
     }
-    const value = this.x2T > 0 ? 2 : 1;
-    this.coinsCollected = Math.min(COINS_TO_WIN, this.coinsCollected + value);
-    this.addScore(10 * value);
+    // cada moneda cuenta 1 para el portal; el x2 sólo duplica los PUNTOS
+    const x2 = this.x2T > 0;
+    this.coinsCollected += 1;
+    this.totalCoins += 1;
+    this.addScore(10 * (x2 ? 2 : 1));
     AudioCtl.coin();
     this.fx.burst(c.x, c.y, { count: 8, colors: [0xffeb3b, 0xffc107, 0xffffff], speed: 260, life: 0.4, gravity: 300 });
-    this.fx.floatText(c.x, c.y - 30, `+${value}`, "#ffeb3b", 34);
-    this.hud.setCoins(this.coinsCollected);
+    this.fx.floatText(c.x, c.y - 30, x2 ? "+1 (x2 pts)" : "+1", "#ffeb3b", 34);
+    this.hud.setCoins(this.coinsCollected, this.level === WORLDS);
 
-    // Al completar las monedas del mundo aparece un PORTAL hacia el siguiente
-    if (!this.portal && !this.boss && !this.bossDefeated && (this.coinsCollected >= COINS_TO_WIN || this.targetLevel() > this.level)) {
-      const toLab = this.coinsCollected >= COINS_TO_WIN;
-      this.portal = new Portal(toLab ? "¡AL LABORATORIO!" : "PORTAL →");
-      this.entities.addChild(this.portal);
-      Sfx.portal();
-      this.hud.showHint(toLab ? "¡Juntaste todo! Entrá al portal para enfrentar al jefe final" : "¡Apareció un PORTAL! Entrá para viajar al siguiente mundo", 4);
+    // Con 50 monedas aparece el JEFE de este mundo (al vencerlo se abre el portal)
+    if (this.coinsCollected >= COINS_PER_WORLD && !this.portal && !this.boss && !this.worldBossBeaten) {
+      this.hud.setBarMessage("¡VENCÉ AL JEFE PARA ABRIR EL PORTAL!");
+      this.startBoss(WORLD_BOSSES[this.level - 1]);
     }
   }
 
-  private targetLevel(): number {
-    return Math.min(MAX_LEVEL, 1 + Math.floor(this.coinsCollected / COINS_PER_LEVEL));
+  /** Portal sin enemigos tras vencer al jefe del mundo (en el último lleva al laboratorio). */
+  private openPortal(): void {
+    const toLab = this.level === WORLDS;
+    this.portal = new Portal(toLab ? "¡AL LABORATORIO!" : "PORTAL →");
+    this.entities.addChild(this.portal);
+    Sfx.portal();
+    this.hud.setBarMessage(toLab ? "¡PORTAL AL LABORATORIO ABIERTO! → entrá" : "¡PORTAL ABIERTO! → entrá");
+    this.hud.showHint(toLab ? `¡Completaste los ${WORLDS} mundos! Entrá al portal para enfrentar al jefe final` : "¡Se abrió el PORTAL! Entrá para viajar al siguiente mundo", 4);
   }
 
   private updatePortal(dt: number, worldSpeed: number): void {
@@ -779,30 +812,45 @@ export class GameScene extends Container implements IScene {
     this.meteorTimer = 4;
     this.coinTimer = 0.8;
 
-    if (this.coinsCollected >= COINS_TO_WIN) {
-      this.startBoss();
+    // el contador de monedas vuelve a 0 en cada pantalla nueva
+    this.coinsCollected = 0;
+    this.worldBossBeaten = false;
+    if (this.level >= WORLDS) {
+      this.hud.setCoins(COINS_PER_WORLD, true);
+      this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
+      this.hud.setLevel(WORLDS + 1);
+      this.startBoss(FINAL_BOSS);
       return;
     }
-    const newLevel = this.targetLevel();
+    const newLevel = this.level + 1;
     this.level = newLevel;
     this.hud.setLevel(newLevel);
+    this.hud.setCoins(0, newLevel === WORLDS);
     this.bg.setTheme(newLevel - 1, 0.5);
-    this.hud.showBanner(`¡NIVEL ${newLevel}!`, `${LEVEL_NAMES[newLevel - 1]} · ${LEVEL_MESSAGES[newLevel] ?? ""}`, 2.8);
+    this.hud.showBanner(`¡MUNDO ${newLevel}!`, `${LEVEL_NAMES[newLevel - 1]} · ${LEVEL_MESSAGES[newLevel] ?? ""}`, 2.8);
     Sfx.levelUp();
     this.confetti();
   }
 
-  /** Aparece el jefe final: alarma, fondo de laboratorio y barra de vida. */
-  private startBoss(): void {
-    this.boss = new Boss(this.diff.bossHp, this.diff.speed);
+  /** Aparece un jefe (el del mundo o el DINO-X final): los demás monstruos se van y queda sólo él. */
+  private startBoss(cfg: BossConfig): void {
+    const hp = Math.max(2, Math.round(this.diff.bossHp * cfg.hpMul));
+    this.boss = new Boss(cfg, hp, this.diff.speed);
     this.boss.on("stunned", () => this.hud.showHint("¡ESTÁ MAREADO!  ¡SALTALE EN LA CABEZA!", 2.2));
     this.entities.addChildAt(this.boss, 0);
-    this.hud.showBoss();
+    this.hud.showBoss(cfg.name, cfg.color);
     this.hud.setBossHp(this.boss.hp, this.boss.maxHp);
-    this.bg.setTheme(LAB_THEME, 0.5);
-    this.alarmT = 2.6;
-    this.hud.showBanner("¡ALERTA!", "El DINO-X se escapó del laboratorio. ¡Derrotalo!", 3);
-    this.hud.showHint("Esquivá el ácido y las ondas.  Cuando choque contra la pared y quede mareado, ¡saltale en la cabeza!", 8);
+    if (cfg.final) {
+      this.finalReached = true;
+      this.bg.setTheme(LAB_THEME, 0.5);
+      this.alarmT = 2.6;
+      this.hud.showBanner("¡ALERTA!", cfg.intro, 3);
+    } else {
+      Sfx.roar();
+      this.shake(14, 0.5);
+      this.hud.showBanner("¡JEFE DEL MUNDO!", `${cfg.name} · ${cfg.intro}`, 3);
+    }
+    this.hud.showHint("Esquivá sus ataques.  Cuando choque contra la pared y quede mareado, ¡saltale en la cabeza!", 6);
     // los enemigos comunes huyen y las monedas que quedaban se convierten en chispas
     for (const e of this.enemies) {
       e.kill();
@@ -827,9 +875,15 @@ export class GameScene extends Container implements IScene {
     this.fx.burst(this.player.x, this.player.y, { count: 30, colors: [0xffffff, 0xffeb3b, 0x76ff03], speed: 600, life: 0.7 });
     this.fx.floatText(this.player.x, this.player.y - 160, boss.hp > 0 ? "¡PUM!" : "¡K.O.!", "#ffeb3b", 64);
     if (boss.hp <= 0) {
-      this.bossDefeated = true;
-      this.addScore(2000);
-      this.hud.showBanner("¡DERROTASTE AL DINO-X!", "", 2.6);
+      this.bossesBeaten++;
+      if (boss.cfg.final) {
+        this.bossDefeated = true;
+        this.addScore(2000);
+      } else {
+        this.worldBossBeaten = true;
+        this.addScore(800);
+      }
+      this.hud.showBanner(`¡VENCISTE AL ${boss.cfg.final ? "DINO-X" : boss.cfg.name}!`, "", 2.4);
     } else if (boss.enraged) {
       this.hud.showHint("¡SE ENOJÓ!  Ahora es más rápido", 2);
     }
@@ -898,8 +952,10 @@ export class GameScene extends Container implements IScene {
     }
     const stats: GameStats = {
       score: this.score,
-      coins: this.coinsCollected,
+      coins: this.totalCoins,
       level: this.level,
+      reachedBoss: this.finalReached,
+      bosses: this.bossesBeaten,
       stomps: this.stomps,
       time: this.elapsed,
       characterId: this.def.id,
@@ -913,6 +969,15 @@ export class GameScene extends Container implements IScene {
   }
 
   // ------------------------------------------------------------------ debug
+
+  /** Para la demo: una fila de monedas a ras del piso entrando por la derecha (hay que agarrarlas). */
+  public debugCoinRow(n: number): void {
+    for (let i = 0; i < n; i++) {
+      const c = new Coin(WIDTH + 60 + i * 64, GROUND_Y - 45);
+      this.coins.push(c);
+      this.entities.addChild(c);
+    }
+  }
 
   /** Para la demo: hace aparecer un power-up puntual. */
   public debugSpawnPower(kind: PowerKind, x: number, y = GROUND_Y - 120): void {

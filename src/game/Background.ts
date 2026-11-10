@@ -1,5 +1,6 @@
 import { Container, Graphics, LINE_CAP, Sprite, Texture, TilingSprite } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
+import { WArt, drawBrick } from "../art/WorldArt";
 import { GROUND_Y, HEIGHT, WIDTH, rand } from "../config";
 
 /** Un escenario: capas con parallax que se repiten cada WIDTH px. */
@@ -26,7 +27,7 @@ interface ThemeFx {
   emberUp: boolean;
   streakRate: number;
   groundTint: number;
-  pier?: boolean;
+  ground?: "dirt" | "pier" | "bricks";
 }
 
 // ------------------------------------------------------------------ helpers de dibujo
@@ -362,6 +363,57 @@ function brokenTank(g: Graphics, X: number): void {
   g.endFill();
 }
 
+/** Mundo de bloques de juguete: ciudad de ladrillos de colores, árboles de bloques y nubes cuadradas. */
+function blockTheme(): Scenery {
+  const s = new Scenery();
+  s.addLayer(skyGradient(0x4fc3f7, 0xe1f5fe), 0);
+  const sun = new Graphics();
+  drawBrick(sun, 1440, 120, 120, 90, 0xfdd835);
+  s.addLayer(sun, 0);
+  // nubes de bloques blancos
+  s.addLayer(
+    twice((g, ox) => {
+      for (const [x, y] of [[180, 170], [760, 110], [1250, 230]]) {
+        drawBrick(g, x + ox, y, 140, 40, 0xffffff);
+        drawBrick(g, x + ox + 40, y - 40, 100, 40, 0xffffff);
+      }
+    }),
+    0.05,
+  );
+  // ciudad de torres de ladrillos
+  const colors = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047, 0xff6d00, 0x8e24aa];
+  s.addLayer(
+    twice((g, ox) => {
+      let k = 0;
+      for (const [x, w, floors] of [[40, 160, 7], [260, 120, 10], [420, 200, 5], [680, 140, 9], [880, 180, 6], [1120, 130, 11], [1300, 220, 4], [1580, 150, 8], [1760, 140, 6]]) {
+        for (let f = 0; f < floors; f++) {
+          drawBrick(g, x + ox, GROUND_Y - 40 - (f + 1) * 48, w, 46, colors[k++ % colors.length], f === floors - 1);
+        }
+        // ventanitas
+        g.beginFill(0xffffff, 0.55);
+        for (let f = 1; f < floors; f += 2) {
+          g.drawRoundedRect(x + ox + w * 0.2, GROUND_Y - 40 - f * 48 - 30, w * 0.2, 16, 3);
+          g.drawRoundedRect(x + ox + w * 0.6, GROUND_Y - 40 - f * 48 - 30, w * 0.2, 16, 3);
+        }
+        g.endFill();
+      }
+    }),
+    0.15,
+  );
+  // árboles de bloques adelante
+  s.addLayer(
+    twice((g, ox) => {
+      for (const x of [140, 620, 1100, 1560]) {
+        drawBrick(g, x + ox + 30, GROUND_Y - 130, 40, 130, 0x6d4c41, false);
+        drawBrick(g, x + ox, GROUND_Y - 200, 100, 70, 0x2e7d32);
+        drawBrick(g, x + ox + 20, GROUND_Y - 250, 60, 50, 0x388e3c);
+      }
+    }),
+    0.5,
+  );
+  return s;
+}
+
 function labTheme(): Scenery {
   const s = new Scenery();
   s.addLayer(skyGradient(0x061417, 0x12302f), 0);
@@ -450,14 +502,15 @@ function labTheme(): Scenery {
 const THEME_FX: ThemeFx[] = [
   { emberColors: [0xff6d00, 0xffab00, 0xff3d00], emberUp: true, streakRate: 0.4, groundTint: 0xffffff },
   { emberColors: [0xffe0b2, 0xffcc80, 0xfff3e0], emberUp: false, streakRate: 0.5, groundTint: 0xffd8a8 },
-  { emberColors: [0xffffff, 0xb3e5fc, 0xe1f5fe], emberUp: true, streakRate: 0, groundTint: 0xffffff, pier: true },
+  { emberColors: [0xffffff, 0xb3e5fc, 0xe1f5fe], emberUp: true, streakRate: 0, groundTint: 0xffffff, ground: "pier" },
   { emberColors: [0xc6ff00, 0xeeff41, 0xb2ff59], emberUp: true, streakRate: 0.8, groundTint: 0x8fb08a },
   { emberColors: [0xff6d00, 0xff3d00, 0xffd600], emberUp: true, streakRate: 1.0, groundTint: 0xffb0a0 },
   { emberColors: [0xffffff, 0xe0aaff, 0xc77dff], emberUp: true, streakRate: 2.2, groundTint: 0xc0a8e8 },
+  { emberColors: [0xe53935, 0xfdd835, 0x1e88e5, 0x43a047], emberUp: false, streakRate: 0, groundTint: 0xffffff, ground: "bricks" },
   { emberColors: [0x76ff03, 0x00e676, 0xb2ff59], emberUp: true, streakRate: 0, groundTint: 0x90a4ae },
 ];
 
-export const LEVEL_NAMES = ["VALLE DE LOS DINOS", "DESIERTO AL ATARDECER", "OCÉANO PROFUNDO", "SELVA DE NOCHE", "VOLCÁN EN ERUPCIÓN", "PLANETA ALIENÍGENA", "LABORATORIO SECRETO"];
+export const LEVEL_NAMES = ["VALLE DE LOS DINOS", "DESIERTO AL ATARDECER", "OCÉANO PROFUNDO", "SELVA DE NOCHE", "VOLCÁN EN ERUPCIÓN", "PLANETA ALIENÍGENA", "MUNDO DE BLOQUES", "LABORATORIO SECRETO"];
 
 interface Ember {
   spr: Sprite;
@@ -494,7 +547,7 @@ export class Background extends Container {
 
   constructor() {
     super();
-    this.themes = [imageTheme(), desertTheme(), oceanTheme(), jungleTheme(), volcanoTheme(), meteorTheme(), labTheme()];
+    this.themes = [imageTheme(), desertTheme(), oceanTheme(), jungleTheme(), volcanoTheme(), meteorTheme(), blockTheme(), labTheme()];
     this.themes.forEach((th, i) => {
       th.visible = i === 0;
       this.addChild(th);
@@ -540,7 +593,7 @@ export class Background extends Container {
     const fx = THEME_FX[this.current];
     this.embers.forEach((e, i) => (e.spr.tint = fx.emberColors[i % fx.emberColors.length]));
     this.ground.tint = fx.groundTint;
-    this.ground.texture = fx.pier ? Art.pier : Art.ground;
+    this.ground.texture = fx.ground === "pier" ? Art.pier : fx.ground === "bricks" ? WArt.bricksGround : Art.ground;
   }
 
   public update(dt: number, worldSpeed: number): void {

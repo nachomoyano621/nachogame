@@ -18,5 +18,4 @@ export const assets = [
   { url: "./cancion.mp3", name: "cancion" },
   { url: "./moneda.mp3", name: "cancion_moneda" },
   { url: "./moneda.png", name: "moneda" },
-  { url: "./win.jpg", name: "win" },
 ];

@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
-import { COINS_TO_WIN, HEIGHT, MAX_LIVES, WIDTH } from "../config";
+import { COINS_PER_WORLD, HEIGHT, MAX_LIVES, WIDTH, WORLDS } from "../config";
 import { AudioCtl } from "../core/AudioCtl";
 import { style } from "./styles";
 
@@ -43,10 +43,12 @@ export class Hud extends Container {
   private readonly bestText: Text;
   private readonly soundText: Text;
   private readonly bar = new Graphics();
+  private readonly barText: Text;
   private readonly slots: { shield: PowerSlot; magnet: PowerSlot; x2: PowerSlot };
   private readonly banner: Text;
   private readonly bannerSub: Text;
   private bannerT = 0;
+  private bannerFit = 1;
   private readonly flashG = new Graphics();
   private flashT = 0;
   private readonly pauseLayer = new Container();
@@ -54,6 +56,8 @@ export class Hud extends Container {
   private hintT = 0;
   private readonly bossBar = new Container();
   private readonly bossFill = new Graphics();
+  private readonly bossName = new Text("", style({ fontSize: 28, fill: "#ffffff", strokeThickness: 6 }));
+  private bossColor = 0x76ff03;
   private bossShown = 1;
   private bossTarget = 1;
   private lastCoins = -1;
@@ -85,7 +89,7 @@ export class Hud extends Container {
     this.coinText.position.set(90, 92);
     this.addChild(this.coinText);
 
-    this.levelText = new Text("NIVEL 1", style({ fontSize: 30, fill: "#80d8ff" }));
+    this.levelText = new Text(`MUNDO 1/${WORLDS}`, style({ fontSize: 28, fill: "#80d8ff" }));
     this.levelText.anchor.set(1, 0);
     this.levelText.position.set(470, 95);
     this.addChild(this.levelText);
@@ -95,8 +99,12 @@ export class Hud extends Container {
     this.scoreText.anchor.set(0.5, 0);
     this.scoreText.position.set(WIDTH / 2, 16);
     this.addChild(this.scoreText);
-    this.bar.position.set(WIDTH / 2 - 300, 98);
+    this.bar.position.set(WIDTH / 2 - 300, 96);
     this.addChild(this.bar);
+    this.barText = new Text("", style({ fontSize: 19, strokeThickness: 4 }));
+    this.barText.anchor.set(0.5);
+    this.barText.position.set(WIDTH / 2, 96 + 15);
+    this.addChild(this.barText);
 
     // Derecha: récord, ayuda y power-ups activos
     this.bestText = new Text(`RÉCORD ${best}`, style({ fontSize: 30, fill: "#ffd54f" }));
@@ -140,7 +148,7 @@ export class Hud extends Container {
     bossBg.beginFill(0x000000, 0.6);
     bossBg.drawRoundedRect(-400, 0, 800, 38, 19);
     bossBg.endFill();
-    const bossName = new Text("DINO-X · EXPERIMENTO DEL LABORATORIO", style({ fontSize: 28, fill: "#b2ff59", strokeThickness: 6 }));
+    const bossName = this.bossName;
     bossName.anchor.set(0.5, 1);
     bossName.y = -4;
     const bossFrame = new Graphics();
@@ -184,24 +192,38 @@ export class Hud extends Container {
     }
   }
 
-  public setCoins(n: number): void {
-    if (n === this.lastCoins) {
+  /**
+   * Monedas del MUNDO actual (no son los puntos). Al llegar a 50 se abre el portal y el contador vuelve a 0.
+   * `lastWorld` = true en el último mundo (el portal lleva al jefe final).
+   */
+  public setCoins(n: number, lastWorld = false): void {
+    const key = n * 2 + (lastWorld ? 1 : 0);
+    if (key === this.lastCoins) {
       return;
     }
-    this.lastCoins = n;
-    this.coinText.text = `${n} / ${COINS_TO_WIN}`;
-    const p = Math.min(1, n / COINS_TO_WIN);
+    this.lastCoins = key;
+    this.coinText.text = `${n} / ${COINS_PER_WORLD}`;
+    const p = Math.min(1, n / COINS_PER_WORLD);
+    const W = 600;
+    const H = 30;
     this.bar.clear();
-    this.bar.beginFill(0x000000, 0.55);
-    this.bar.drawRoundedRect(0, 0, 600, 22, 11);
+    this.bar.beginFill(0x000000, 0.6);
+    this.bar.drawRoundedRect(0, 0, W, H, 15);
     this.bar.endFill();
     if (p > 0) {
-      this.bar.beginFill(0xffc107);
-      this.bar.drawRoundedRect(3, 3, Math.max(16, 594 * p), 16, 8);
+      this.bar.beginFill(p >= 1 ? 0x18ffff : 0xffc107);
+      this.bar.drawRoundedRect(3, 3, Math.max(24, (W - 6) * p), H - 6, 12);
       this.bar.endFill();
     }
-    this.bar.lineStyle(3, 0xffffff, 0.8);
-    this.bar.drawRoundedRect(0, 0, 600, 22, 11);
+    this.bar.lineStyle(3, 0xffffff, 0.85);
+    this.bar.drawRoundedRect(0, 0, W, H, 15);
+    const goal = lastWorld ? "JEFE FINAL" : "PORTAL";
+    this.barText.text = n >= COINS_PER_WORLD ? `¡${goal} ABIERTO! → entrá` : `${n} / ${COINS_PER_WORLD} MONEDAS → ${goal}`;
+  }
+
+  /** Mensaje fijo en la barra (ej: durante la pelea con el jefe). */
+  public setBarMessage(text: string): void {
+    this.barText.text = text;
   }
 
   public setScore(n: number): void {
@@ -212,7 +234,7 @@ export class Hud extends Container {
   }
 
   public setLevel(n: number): void {
-    this.levelText.text = `NIVEL ${n}`;
+    this.levelText.text = n > WORLDS ? "JEFE FINAL" : `MUNDO ${n}/${WORLDS}`;
   }
 
   public setPowers(p: PowerStatus): void {
@@ -238,6 +260,11 @@ export class Hud extends Container {
     this.banner.visible = true;
     this.bannerSub.visible = sub !== "";
     this.bannerT = seconds;
+    // achicar carteles largos para que entren en la pantalla
+    this.banner.scale.set(1);
+    this.bannerSub.scale.set(1);
+    this.bannerFit = Math.min(1, (WIDTH - 120) / Math.max(1, this.banner.width));
+    this.bannerSub.scale.set(Math.min(1, (WIDTH - 80) / Math.max(1, this.bannerSub.width)));
   }
 
   public showHint(text: string, seconds: number): void {
@@ -254,7 +281,9 @@ export class Hud extends Container {
     this.flashG.alpha = 1;
   }
 
-  public showBoss(): void {
+  public showBoss(name: string, color: number): void {
+    this.bossName.text = name;
+    this.bossColor = color;
     this.bossBar.visible = true;
     this.bossShown = 0;
     this.bossTarget = 1;
@@ -285,7 +314,7 @@ export class Hud extends Container {
 
     if (this.bannerT > 0) {
       this.bannerT -= dt;
-      const s = 1 + Math.sin(this.t * 8) * 0.03;
+      const s = (1 + Math.sin(this.t * 8) * 0.03) * this.bannerFit;
       this.banner.scale.set(s);
       const a = Math.min(1, this.bannerT * 3);
       this.banner.alpha = a;
@@ -307,7 +336,7 @@ export class Hud extends Container {
       this.bossFill.clear();
       if (this.bossShown > 0.005) {
         const low = this.bossTarget <= 0.5;
-        this.bossFill.beginFill(low ? 0xff1744 : 0x76ff03);
+        this.bossFill.beginFill(low ? 0xff1744 : this.bossColor);
         this.bossFill.drawRoundedRect(-394, 6, 788 * this.bossShown, 26, 13);
         this.bossFill.endFill();
       }

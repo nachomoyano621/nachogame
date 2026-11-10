@@ -1,4 +1,4 @@
-import { AnimatedSprite, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { AnimatedSprite, Graphics, Rectangle, Sprite, Texture, filters } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 import { WArt } from "../art/WorldArt";
 import { BASE_WORLD_SPEED, GROUND_Y, WIDTH, rand } from "../config";
@@ -183,6 +183,60 @@ export class LavaBall extends Enemy {
   }
 }
 
+/** Bebé DINO-X: mini dino mutante que larga el jefe final. Corre a los saltitos; se puede aplastar. */
+export class BabyDino extends Enemy {
+  public override readonly stompable = true;
+  public override readonly label = "bebé dino-x";
+  private readonly spr: Sprite;
+  private readonly speed = rand(330, 430);
+  private vy = 0;
+  private hopT = rand(0.2, 0.8);
+
+  constructor(x: number) {
+    super();
+    this.spr = Sprite.from("myDino");
+    this.spr.anchor.set(0.5, 1);
+    this.spr.scale.set(-0.42, 0.42);
+    const mutant = new filters.ColorMatrixFilter();
+    mutant.hue(105, false);
+    mutant.brightness(1.5, true);
+    this.spr.filters = [mutant];
+    this.addChild(this.spr);
+    this.position.set(x, GROUND_Y + 2);
+  }
+
+  protected override tick(dt: number, ctx: EnemyCtx): void {
+    this.x -= this.speed * ctx.speedMul * dt;
+    this.hopT -= dt;
+    if (this.hopT <= 0 && this.vy === 0) {
+      this.vy = -rand(380, 520);
+      this.hopT = rand(0.6, 1.1);
+    }
+    if (this.vy !== 0) {
+      this.vy += 2000 * dt;
+      this.spr.y = Math.min(0, this.spr.y + this.vy * dt);
+      if (this.spr.y === 0 && this.vy > 0) {
+        this.vy = 0;
+      }
+    }
+    this.spr.rotation = Math.sin(this.t * 18) * 0.08;
+  }
+
+  public override getHitbox(): Rectangle {
+    return new Rectangle(this.x - 42, this.y + this.spr.y - 62, 84, 60);
+  }
+}
+
+/** Bebés de los jefes (aparecen a la posición x). */
+export const BOSS_BABIES = {
+  dino: (x: number): Enemy => new BabyDino(x),
+  alien: (x: number): Enemy => {
+    const e = new Walker({ label: "bebé marciano", frames: WArt.alien, scale: 0.55, speed: [320, 420], hit: { w: 46, h: 76 }, stompable: true, anim: 0.2, hop: true });
+    e.x = x;
+    return e;
+  },
+};
+
 /** Fábricas de los monstruos propios de cada mundo. */
 export const WORLD_ENEMIES = {
   scorpion: (): Enemy => new Walker({ label: "escorpión", frames: WArt.scorpion, scale: 0.95, speed: [240, 320], hit: { w: 110, h: 62 }, stompable: true, anim: 0.12 }),
@@ -193,5 +247,7 @@ export const WORLD_ENEMIES = {
   salamander: (): Enemy => new Walker({ label: "salamandra", frames: WArt.salamander, scale: 1, speed: [330, 410], hit: { w: 140, h: 52 }, stompable: true, anim: 0.18 }),
   lava: (x: number): Enemy => new LavaBall(x),
   alien: (): Enemy => new Walker({ label: "alien", frames: WArt.alien, scale: 0.95, speed: [250, 320], hit: { w: 70, h: 125 }, stompable: true, anim: 0.15, hop: true }),
+  bricky: (): Enemy => new Walker({ label: "bloquecito", frames: WArt.brickMonster, scale: 0.95, speed: [270, 350], hit: { w: 100, h: 96 }, stompable: true, anim: 0.18, hop: true }),
+  copter: (): Enemy => new Flyer({ label: "helibloque", frames: WArt.brickCopter, scale: 0.9, speed: [260, 330], baseY: [640, 800], amp: 70, freq: 2, hit: { w: 110, h: 60 }, stompable: true, anim: 0.4 }),
   ufo: (): Enemy => new Flyer({ label: "ovni", frames: WArt.ufo, scale: 0.9, speed: [260, 320], baseY: [640, 780], amp: 90, freq: 1.6, hit: { w: 140, h: 60 }, stompable: true, anim: 0.12 }),
 };

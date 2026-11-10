@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
-import { COINS_TO_WIN, HEIGHT, WIDTH, getDifficulty, rand } from "../config";
+import { HEIGHT, WIDTH, WORLDS, getDifficulty, rand } from "../config";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { LEVEL_NAMES } from "../game/Background";
 import { Effects } from "../game/Effects";
@@ -65,7 +65,7 @@ export class FinalScene extends Container implements IScene {
     this.ghostA.alpha = 0.55;
     this.ghostB.alpha = 0.55;
 
-    const where = stats.coins >= COINS_TO_WIN && !stats.bossDefeated ? `Te venció el DINO-X en el ${LEVEL_NAMES[6]}` : `Caíste en el MUNDO ${stats.level}: ${LEVEL_NAMES[stats.level - 1]}`;
+    const where = stats.reachedBoss ? `Te venció el DINO-X en el ${LEVEL_NAMES[WORLDS]}` : `Caíste en el MUNDO ${stats.level}: ${LEVEL_NAMES[stats.level - 1]}`;
     const sub = new Text(`${where}  ·  ${getDifficulty(stats.difficulty).name}`, style({ fontSize: 38, fill: "#ffcdd2", strokeThickness: 6 }));
     sub.anchor.set(0.5);
     sub.position.set(WIDTH / 2, 275);

@@ -328,7 +328,7 @@ export class Rex extends Enemy {
  */
 export class Meteor extends Enemy {
   public override readonly stompable = false;
-  public override readonly label = "meteorito";
+  public override readonly label: string;
   private static readonly WARN = 1.1;
   private static readonly FALL = 0.6;
   private readonly marker = new Graphics();
@@ -338,8 +338,10 @@ export class Meteor extends Enemy {
   private readonly startDx = rand(380, 620);
   private readonly startDy = -1150;
 
-  constructor(x: number) {
+  /** `tex`/`label` permiten reusarlo (ej: lluvia de ladrillos en el mundo de bloques). */
+  constructor(x: number, tex: Texture = Art.meteor, label = "meteorito") {
     super();
+    this.label = label;
     this.position.set(x, GROUND_Y);
     this.marker.beginFill(0xff1744, 0.45);
     this.marker.drawEllipse(0, 0, 80, 18);
@@ -347,7 +349,10 @@ export class Meteor extends Enemy {
     this.marker.lineStyle(4, 0xff1744, 0.9);
     this.marker.drawEllipse(0, 0, 80, 18);
     this.addChild(this.marker);
-    this.rock = new Sprite(Art.meteor);
+    this.rock = new Sprite(tex);
+    if (tex !== Art.meteor) {
+      this.rock.scale.set(1.8);
+    }
     this.rock.anchor.set(0.5);
     this.rock.visible = false;
     this.addChild(this.rock);

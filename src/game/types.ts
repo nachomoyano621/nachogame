@@ -10,6 +10,10 @@ export interface GameStats {
   characterId: CharacterId;
   difficulty: DifficultyId;
   bossDefeated: boolean;
+  /** Llegó al laboratorio (pelea con el jefe). */
+  reachedBoss: boolean;
+  /** Jefes vencidos (los de cada mundo + el final). */
+  bosses: number;
   best: number;
   newRecord: boolean;
 }

@@ -98,7 +98,7 @@ export const POWER_LABEL: Record<PowerKind, string> = {
   heart: "+1 VIDA",
   shield: "¡ESCUDO DE COLÓN!",
   magnet: "¡IMÁN!",
-  x2: "¡MONEDAS x2!",
+  x2: "¡PUNTOS x2!",
 };
 
 export class PowerUp extends Sprite {
