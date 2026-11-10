@@ -1,4 +1,5 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { AudioCtl } from "../core/AudioCtl";
 import { HEIGHT, WIDTH, WORLDS, getDifficulty, rand } from "../config";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { LEVEL_NAMES } from "../game/Background";
@@ -30,6 +31,7 @@ export class FinalScene extends Container implements IScene {
 
   constructor(private readonly stats: GameStats) {
     super();
+    AudioCtl.music("gameover");
 
     // fondo: degradé rojo oscuro a negro + resplandor
     const bg = new Graphics();

@@ -269,6 +269,7 @@ async function startAt(id: string, level: number, difficulty = "medio", carry = 
   s.hud.setCoins(0, level === WORLDS);
   s.bg.setTheme(level - 1, 0.01);
   s.hud.showBanner(`MUNDO ${level}`, `${LEVEL_NAMES[level - 1]} · ${s.def.name}`, 2.6);
+  AudioCtl.music(`world${level}`);
   mark(`world${level}`);
   return s;
 }

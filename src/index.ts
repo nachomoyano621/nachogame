@@ -7,6 +7,8 @@ import { WArt, buildWorldArt } from "./art/WorldArt";
 import { WORLD_ENEMIES } from "./game/worldEnemies";
 import { HEIGHT, WIDTH } from "./config";
 import { AudioCtl } from "./core/AudioCtl";
+import { Music } from "./core/Music";
+import { Sfx } from "./core/Sfx";
 import { SceneManager } from "./core/SceneManager";
 import { TitleScene } from "./Scenas/TitleScene";
 import { runDemo } from "./demo/Demo";
@@ -75,11 +77,18 @@ Loader.shared.load(() => {
   }
 });
 
+// Los navegadores no dejan sonar audio hasta que el usuario interactúa: destrabarlo en la primera tecla/clic
+const unlockAudio = (): void => {
+  void Sfx.sharedContext()?.resume();
+};
+window.addEventListener("keydown", unlockAudio);
+window.addEventListener("pointerdown", unlockAudio);
+
 // Mute global con M en cualquier pantalla
 Keyboard.down.on("KeyM", () => AudioCtl.toggle());
 
 // Acceso para pruebas en local (no se incluye en el build de producción)
 declare const process: { env: { NODE_ENV?: string } };
 if (process.env.NODE_ENV !== "production") {
-  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES };
+  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES, Music };
 }

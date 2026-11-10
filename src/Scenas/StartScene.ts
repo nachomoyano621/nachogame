@@ -1,4 +1,5 @@
 import { AnimatedSprite, Container, Graphics, Text } from "pixi.js";
+import { AudioCtl } from "../core/AudioCtl";
 import { DIFFICULTIES, HEIGHT, WIDTH, WORLDS } from "../config";
 import { Background, LEVEL_NAMES } from "../game/Background";
 import { IScene, SceneManager } from "../core/SceneManager";
@@ -115,6 +116,7 @@ export class StartScene extends Container implements IScene {
 
   constructor() {
     super();
+    AudioCtl.music("select");
 
     // De fondo pasan los mundos del juego, uno tras otro
     this.addChild(this.bg);

@@ -1,4 +1,5 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text } from "pixi.js";
+import { AudioCtl } from "../core/AudioCtl";
 import { FINAL_BOSS, WORLD_BOSSES } from "../game/Boss";
 import { HEIGHT, WIDTH, WORLDS, getDifficulty, rand } from "../config";
 import { IScene, SceneManager } from "../core/SceneManager";
@@ -44,6 +45,7 @@ export class WinScene extends Container implements IScene {
 
   constructor(private readonly stats: GameStats) {
     super();
+    AudioCtl.music("win");
 
     // cielo de noche
     const bg = new Graphics();

@@ -1,11 +1,13 @@
-import { AnimatedSprite, Container, Graphics, Sprite, Text, Texture, TilingSprite } from "pixi.js";
+import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Text, Texture, TilingSprite } from "pixi.js";
+import { AudioCtl } from "../core/AudioCtl";
 import { Art } from "../art/ProceduralArt";
 import { WArt } from "../art/WorldArt";
 import { HEIGHT, WIDTH, WORLDS } from "../config";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Background, LEVEL_NAMES } from "../game/Background";
-import { CHARACTERS, scaleFor } from "../game/characters";
+import { CHARACTERS } from "../game/characters";
+import { Effects } from "../game/Effects";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
 import { StartScene } from "./StartScene";
@@ -25,10 +27,16 @@ function worldThumbs(): Texture[] {
   return thumbs;
 }
 
+const PARADE_SPEED = 230;
+
 interface Runner {
   spr: AnimatedSprite;
-  speed: number;
-  bob: number;
+  shadow: Graphics;
+  /** Altura de vuelo (murciélago); 0 = corre por el piso. */
+  fly: number;
+  hero: boolean;
+  vy: number;
+  hopT: number;
 }
 
 /**
@@ -39,6 +47,7 @@ export class TitleScene extends Container implements IScene {
   private readonly stripes = new Container();
   private readonly cards: Container[] = [];
   private readonly runners: Runner[] = [];
+  private readonly dust = new Effects();
   private readonly ground: TilingSprite;
   private readonly title = new Container();
   private readonly press: Text;
@@ -47,6 +56,7 @@ export class TitleScene extends Container implements IScene {
 
   constructor() {
     super();
+    AudioCtl.music("title");
 
     // fondo de franjas diagonales rojinegras que se desplazan
     const g = new Graphics();
@@ -132,31 +142,54 @@ export class TitleScene extends Container implements IScene {
     this.press.position.set(WIDTH / 2, 730);
     this.addChild(this.press);
 
-    // piso y desfile: los 4 personajes corriendo, perseguidos por monstruos de todos los mundos
-    this.ground = new TilingSprite(Art.ground, WIDTH, HEIGHT - PARADE_Y + 6);
-    this.ground.y = PARADE_Y - 4;
+    // piso rojinegro (damero que se desplaza) con línea blanca arriba
+    const tileG = new Graphics();
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 2; col++) {
+        tileG.beginFill((row + col) % 2 === 0 ? 0xb71c1c : 0x121212);
+        tileG.drawRect(col * 60, row * 50, 60, 50);
+        tileG.endFill();
+      }
+    }
+    const tileTex = SceneManager.renderer.generateTexture(tileG, { region: new Rectangle(0, 0, 120, 100), resolution: 1 });
+    tileG.destroy();
+    this.ground = new TilingSprite(tileTex, WIDTH, HEIGHT - PARADE_Y);
+    this.ground.y = PARADE_Y;
     this.addChild(this.ground);
-    const add = (frames: Texture[], height: number, speed: number, flip: boolean, x: number, bob = 0): void => {
+    const edge = new Graphics();
+    edge.beginFill(0xffffff, 0.85);
+    edge.drawRect(0, PARADE_Y - 3, WIDTH, 6);
+    edge.endFill();
+    this.addChild(edge);
+    this.addChild(this.dust);
+
+    // desfile: los 4 héroes adelante, saltando; atrás los monstruos de todos los mundos persiguiéndolos.
+    // `facesLeft`: el dibujo original mira a la izquierda y hay que darlo vuelta para que corra a la derecha.
+    const add = (frames: Texture[], height: number, x: number, o: { facesLeft?: boolean; fly?: number; hero?: boolean } = {}): void => {
+      const shadow = new Graphics();
+      shadow.beginFill(0x000000, 0.35);
+      shadow.drawEllipse(0, 0, height * 0.32, 9);
+      shadow.endFill();
+      shadow.position.set(x, PARADE_Y + 2);
+      this.addChild(shadow);
       const spr = new AnimatedSprite(frames, false);
       spr.anchor.set(0.5, 1);
       const k = height / Math.max(...frames.map((f) => f.height));
-      spr.scale.set(flip ? -k : k, k);
-      spr.animationSpeed = 0.25;
+      spr.scale.set(o.facesLeft ? -k : k, k);
+      spr.animationSpeed = o.hero ? 0.3 : 0.2;
       spr.play();
       spr.position.set(x, PARADE_Y);
       this.addChild(spr);
-      this.runners.push({ spr, speed, bob });
+      this.runners.push({ spr, shadow, fly: o.fly ?? 0, hero: !!o.hero, vy: 0, hopT: Math.random() * 1.5 });
     };
-    CHARACTERS.forEach((def, i) => {
-      const frames = def.frames();
-      add(frames, def.height * 0.9 * (scaleFor(def, frames) > 0 ? 1 : 1), 210, false, 900 - i * 170);
-    });
-    add([Texture.from("dino1"), Texture.from("dino2")], 150, 210, true, 300);
-    add(WArt.scorpion, 70, 210, false, 150);
-    add(WArt.crab, 70, 210, false, 20);
-    add(Art.bat, 60, 210, false, -120, 110);
-    add(WArt.alien, 110, 210, false, -260);
-    add(WArt.brickMonster, 90, 210, false, -400);
+    CHARACTERS.forEach((def, i) => add(def.frames(), def.height, 1000 - i * 165, { hero: true }));
+    add([Texture.from("dino1"), Texture.from("dino2")], 165, 330);
+    add(WArt.scorpion, 80, 160, { facesLeft: true });
+    add(WArt.crab, 76, 30);
+    add(Art.bat, 64, -90, { fly: 120 });
+    add(WArt.salamander, 70, -230, { facesLeft: true });
+    add(WArt.alien, 115, -370);
+    add(WArt.brickMonster, 95, -500);
 
     Keyboard.down.on("key", this.onKey, this);
     this.interactive = true;
@@ -191,13 +224,41 @@ export class TitleScene extends Container implements IScene {
     });
     this.ground.tilePosition.x -= 240 * dt;
     for (const r of this.runners) {
-      r.spr.x += r.speed * dt;
+      r.spr.x += PARADE_SPEED * dt;
       if (r.spr.x > WIDTH + 200) {
-        r.spr.x -= WIDTH + 800;
+        r.spr.x -= WIDTH + 900;
       }
-      r.spr.y = PARADE_Y - (r.bob ? r.bob + Math.sin(this.t * 4 + r.spr.x * 0.01) * 15 : Math.abs(Math.sin(this.t * 10 + r.spr.x)) * 6);
+      let lift = 0;
+      if (r.fly) {
+        lift = r.fly + Math.sin(this.t * 4 + r.spr.x * 0.01) * 18;
+      } else if (r.hero) {
+        // saltitos de festejo con gravedad
+        r.hopT -= dt;
+        if (r.hopT <= 0 && r.vy === 0 && r.spr.y >= PARADE_Y) {
+          r.vy = -620;
+          r.hopT = 1.2 + Math.random() * 1.4;
+        }
+        if (r.vy !== 0) {
+          r.vy += 2000 * dt;
+          r.spr.y = Math.min(PARADE_Y, r.spr.y + r.vy * dt);
+          if (r.spr.y >= PARADE_Y) {
+            r.vy = 0;
+            this.dust.burst(r.spr.x, PARADE_Y - 4, { count: 6, colors: [0xffffff, 0xffcdd2], speed: 140, life: 0.35, gravity: 500, up: 90, size: 0.7 });
+          }
+        }
+        lift = PARADE_Y - r.spr.y;
+        if (lift === 0 && Math.random() < dt * 5) {
+          this.dust.burst(r.spr.x - 30, PARADE_Y - 4, { count: 2, colors: [0xffffff, 0xef9a9a], speed: 70, life: 0.3, gravity: 200, up: 40, size: 0.5 });
+        }
+      } else {
+        lift = Math.abs(Math.sin(this.t * 10 + r.spr.x)) * 6;
+      }
+      r.spr.y = PARADE_Y - lift;
+      r.shadow.x = r.spr.x;
+      r.shadow.scale.set(Math.max(0.4, 1 - lift / 300));
       r.spr.update(dt * 60);
     }
+    this.dust.update(dt);
   }
 
   public onExit(): void {

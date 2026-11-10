@@ -153,7 +153,7 @@ export class GameScene extends Container implements IScene {
     Keyboard.up.on("key", this.onKeyUp, this);
     window.addEventListener("blur", this.onBlur);
 
-    AudioCtl.playMusic();
+    AudioCtl.music(`world${this.level}`);
   }
 
   // ------------------------------------------------------------------ input
@@ -197,7 +197,7 @@ export class GameScene extends Container implements IScene {
     Keyboard.down.off("key", this.onKeyDown, this);
     Keyboard.up.off("key", this.onKeyUp, this);
     window.removeEventListener("blur", this.onBlur);
-    AudioCtl.stopMusic();
+    // la música la elige la pantalla siguiente (no se corta acá para no pisarla)
   }
 
   // ------------------------------------------------------------------ loop
@@ -763,6 +763,7 @@ export class GameScene extends Container implements IScene {
 
   /** Portal sin enemigos tras vencer al jefe del mundo (en el último lleva al laboratorio). */
   private openPortal(): void {
+    AudioCtl.music(`world${this.level}`); // vuelve la música del mundo
     const toLab = this.level === WORLDS;
     this.portal = new Portal(toLab ? "¡AL LABORATORIO!" : "PORTAL →");
     this.entities.addChild(this.portal);
@@ -827,6 +828,7 @@ export class GameScene extends Container implements IScene {
     this.hud.setLevel(newLevel);
     this.hud.setCoins(0, newLevel === WORLDS);
     this.bg.setTheme(newLevel - 1, 0.5);
+    AudioCtl.music(`world${newLevel}`);
     this.hud.showBanner(`¡MUNDO ${newLevel}!`, `${LEVEL_NAMES[newLevel - 1]} · ${LEVEL_MESSAGES[newLevel] ?? ""}`, 2.8);
     Sfx.levelUp();
     this.confetti();
@@ -839,6 +841,7 @@ export class GameScene extends Container implements IScene {
     this.boss.on("stunned", () => this.hud.showHint("¡ESTÁ MAREADO!  ¡SALTALE EN LA CABEZA!", 2.2));
     this.entities.addChildAt(this.boss, 0);
     this.hud.showBoss(cfg.name, cfg.color);
+    AudioCtl.music(cfg.final ? "final" : "boss");
     this.hud.setBossHp(this.boss.hp, this.boss.maxHp);
     if (cfg.final) {
       this.finalReached = true;
