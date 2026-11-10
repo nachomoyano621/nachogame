@@ -1,4 +1,4 @@
-import { Container, Graphics, LINE_CAP, Sprite, Texture, TilingSprite } from "pixi.js";
+import { AbstractRenderer, Container, Graphics, LINE_CAP, Rectangle, Sprite, Texture, TilingSprite } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 import { WArt, drawBrick } from "../art/WorldArt";
 import { GROUND_Y, HEIGHT, WIDTH, rand } from "../config";
@@ -587,6 +587,22 @@ export class Background extends Container {
     this.addChildAt(next, this.getChildIndex(this.themes[this.previous]) + 1);
     this.fade = 0;
     this.applyFx();
+  }
+
+  /** Foto en miniatura de un mundo (para la pantalla de título). */
+  public snapshot(renderer: AbstractRenderer, index: number, resolution = 0.25): Texture {
+    this.themes.forEach((t, k) => {
+      t.visible = k === index;
+      t.alpha = 1;
+    });
+    this.current = index;
+    this.applyFx();
+    this.sky.visible = false;
+    this.embersLayer.visible = false;
+    const tex = renderer.generateTexture(this, { region: new Rectangle(0, 0, WIDTH, HEIGHT), resolution });
+    this.sky.visible = true;
+    this.embersLayer.visible = true;
+    return tex;
   }
 
   private applyFx(): void {

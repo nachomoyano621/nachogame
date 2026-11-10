@@ -8,7 +8,7 @@ import { WORLD_ENEMIES } from "./game/worldEnemies";
 import { HEIGHT, WIDTH } from "./config";
 import { AudioCtl } from "./core/AudioCtl";
 import { SceneManager } from "./core/SceneManager";
-import { StartScene } from "./Scenas/StartScene";
+import { TitleScene } from "./Scenas/TitleScene";
 import { runDemo } from "./demo/Demo";
 import { style } from "./ui/styles";
 import { Keyboard } from "./utils/Keyboard";
@@ -66,7 +66,7 @@ Loader.shared.load(() => {
   buildWorldArt(app.renderer);
   AudioCtl.init();
   SceneManager.init(app);
-  SceneManager.change(new StartScene());
+  SceneManager.change(new TitleScene());
 
   // Modo demo automático: ?demo (y ?demo&record para grabar el video)
   const params = new URLSearchParams(window.location.search);

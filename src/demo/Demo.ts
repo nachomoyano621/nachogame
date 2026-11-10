@@ -10,6 +10,7 @@ import { WORLD_ENEMIES } from "../game/worldEnemies";
 import { Player } from "../game/Player";
 import { Portal } from "../game/Portal";
 import { Coin } from "../game/pickups";
+import { GameStats } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { FinalScene } from "../Scenas/FinalScene";
 import { GameScene } from "../Scenas/GameScene";
@@ -90,7 +91,8 @@ class AutoPilot {
     const p = s.player;
     // Sin trampas: si le queda 1 vida, aparece un corazón de verdad adelante para que lo agarre.
     this.heartCd -= dt;
-    const heart = s.powerUps.find((u) => u.kind === "heart" && u.x < WIDTH - 60);
+    // sólo cuenta un corazón que esté a su alcance (no uno flotando muy alto)
+    const heart = s.powerUps.find((u) => u.kind === "heart" && u.x < WIDTH - 60 && u.y > GROUND_Y - 220);
     if (this.keepAlive && s.lives <= 1 && this.heartCd <= 0 && !heart) {
       s.debugSpawnPower("heart", p.x + 30, GROUND_Y - 90); // justo encima: lo agarra al toque
       this.heartCd = 1.5;
@@ -245,7 +247,15 @@ async function waitUntil(cond: () => boolean, maxSeconds: number): Promise<void>
  */
 async function startAt(id: string, level: number, difficulty = "medio", carry = true): Promise<GS> {
   const prev = scene();
-  const keep = prev && carry ? { score: prev.score, totalCoins: prev.totalCoins, stomps: prev.stomps, elapsed: prev.elapsed, bossesBeaten: prev.bossesBeaten } : null;
+  // si el personaje murió (pantalla de Game Over), se sigue con lo que había juntado en esa partida
+  const over = SceneManager.scene instanceof FinalScene ? (SceneManager.scene as unknown as { stats: GameStats }).stats : null;
+  const keep = !carry
+    ? null
+    : prev
+      ? { score: prev.score, totalCoins: prev.totalCoins, stomps: prev.stomps, elapsed: prev.elapsed, bossesBeaten: prev.bossesBeaten }
+      : over
+        ? { score: over.score, totalCoins: over.coins, stomps: over.stomps, elapsed: over.time, bossesBeaten: over.bosses }
+        : null;
   SceneManager.change(new GameScene(char(id), DIFFICULTIES.find((d) => d.id === difficulty) ?? DIFFICULTIES[1]));
   await sleep(0.15);
   const s = scene() as GS;
@@ -259,7 +269,18 @@ async function startAt(id: string, level: number, difficulty = "medio", carry = 
   s.hud.setCoins(0, level === WORLDS);
   s.bg.setTheme(level - 1, 0.01);
   s.hud.showBanner(`MUNDO ${level}`, `${LEVEL_NAMES[level - 1]} · ${s.def.name}`, 2.6);
+  mark(`world${level}`);
   return s;
+}
+
+// ------------------------------------------------------------------ marcas de tiempo (para editar un resumen)
+
+const marks: { name: string; t: number }[] = [];
+let recT0 = performance.now();
+
+/** Anota en qué segundo del video pasa algo (inicio de mundo, jefe, victoria...). */
+function mark(name: string): void {
+  marks.push({ name, t: Math.round(((performance.now() - recT0) / 1000) * 100) / 100 });
 }
 
 /** Completa las monedas que faltan para las 50 del mundo (de a poco, para que se vea la barra) y entra al portal. */
@@ -275,15 +296,23 @@ async function goThroughPortal(): Promise<void> {
     await sleep(0.2);
   }
   // con 50 monedas aparece el jefe del mundo: el piloto lo pelea
+  if (s.boss) {
+    mark(`bossStart${s.level}`);
+  }
   await sleep(0.3);
   if (s.boss) {
-    await fightBoss(s, 1);
+    // el Marciano tiene 2 de vida en la demo para que alcance a largar los marcianitos
+    await fightBoss(s, s.boss.cfg.babies ? 2 : 1);
   }
   const lvl = s.level;
   await waitUntil(() => !!s.portal || scene() !== s, 4);
   await waitUntil(() => !s.portal || s.level !== lvl || !!s.boss, 6);
   if (s.portal && s.level === lvl && !s.boss) {
     s.enterPortal(); // si igual no llegó, entra
+  }
+  const ns = scene();
+  if (ns) {
+    mark(ns.boss ? "lab" : `world${ns.level}`);
   }
   await sleep(0.6);
 }
@@ -295,6 +324,8 @@ async function goThroughPortal(): Promise<void> {
 async function fightBoss(s: GS, hp: number): Promise<void> {
   const b = s.boss;
   if (!b) return;
+  const tag = b.cfg.final ? "X" : String(s.level);
+  b.on("summon", () => mark(`babies${tag}`));
   b.hp = Math.min(b.hp, hp);
   s.hud.setBossHp(b.hp, b.maxHp);
   await waitUntil(() => s.boss !== b || scene() !== s, 7);
@@ -305,6 +336,7 @@ async function fightBoss(s: GS, hp: number): Promise<void> {
     await sleep(0.1);
   }
   await waitUntil(() => s.boss !== b || scene() !== s, 4);
+  mark(b.cfg.final ? "bossEndX" : `bossEnd${s.level}`);
 }
 
 export async function runDemo(app: Application, record: boolean): Promise<void> {
@@ -313,6 +345,12 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
   app.ticker.add(() => pilot.step(Math.min(app.ticker.deltaMS, 50) / 1000));
 
   const stop = record ? startRecording(app) : null;
+
+  // 0) Pantalla de título (rojinegra, con los 7 mundos) -> ENTER
+  await sleep(4.5);
+  tap("Enter");
+  await sleep(0.4);
+  mark("menu");
 
   // 1) Menú: personajes y dificultades
   await sleep(1.5);
@@ -344,7 +382,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
 
   // 3) Desierto: agarra un cráneo y lo lanza a los escorpiones; buitre y rocas rodantes
   {
-    const s = scene() ?? (await startAt("vikingo", 2, "medio", false));
+    const s = scene() ?? (await startAt("vikingo", 2));
     s.spawnSkull(s.player.x + 380);
     await sleep(1.2);
     s.addEnemy(W.scorpion());
@@ -373,7 +411,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
 
   // 5) Selva de noche (sigue el ninja): serpientes, murciélagos y la SERPIENTE GIGANTE
   {
-    const s = scene() ?? (await startAt("ninja", 4, "medio", false));
+    const s = scene() ?? (await startAt("ninja", 4));
     s.addEnemy(W.snake());
     await sleep(3);
     s.addEnemy(W.snake());
@@ -408,7 +446,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
 
   // 8) Mundo de bloques (sigue Robo-Tomi): bloquecitos, helibloques y el GIGANTE DE BLOQUES -> laboratorio
   {
-    const s = scene() ?? (await startAt("robot", 7, "medio", false));
+    const s = scene() ?? (await startAt("robot", 7));
     s.addEnemy(W.bricky());
     await sleep(2);
     s.addEnemy(W.copter());
@@ -426,6 +464,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
 
   // 9) Pantalla de victoria
   pilot.enabled = false;
+  mark("win");
   await sleep(5.5);
 
   // 10) Partida en DIFÍCIL que termina en Game Over
@@ -440,6 +479,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
       scene()?.addEnemy(new Rex());
       await waitUntil(isGameOver, 3.5);
     }
+    mark("gameover");
     pilot.enabled = false;
     await sleep(6);
   }
@@ -449,6 +489,7 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
   if (stop) {
     await stop();
   }
+  (window as unknown as { __demoMarks: unknown }).__demoMarks = marks;
   (window as unknown as { __demoFinished: boolean }).__demoFinished = true;
 }
 
@@ -475,6 +516,8 @@ function startRecording(app: Application): () => Promise<void> {
     });
   };
   rec.start(1000);
+  recT0 = performance.now();
+  mark("title");
   return () =>
     new Promise<void>((res) => {
       rec.onstop = () => void pending.then(() => res());

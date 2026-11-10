@@ -372,6 +372,7 @@ export class Boss extends Container {
       this.timer = 0.7;
       this.spitLeft = this.enraged ? 3 : 2;
       Sfx.roar();
+      this.emit("summon");
     } else if (a === "spit") {
       this.state = "spitWind";
       this.timer = 0.6;
