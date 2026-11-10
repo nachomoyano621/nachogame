@@ -144,7 +144,7 @@ export class StartScene extends Container implements IScene {
 
     const sub = new Text("ELEGÍ TU PERSONAJE", style({ fontSize: 44, strokeThickness: 7 }));
     sub.anchor.set(0.5);
-    sub.position.set(WIDTH / 2, 252);
+    sub.position.set(WIDTH / 2, 244);
     this.addChild(sub);
 
     this.bestText = new Text("", style({ fontSize: 34, fill: "#ffd54f" }));
@@ -154,7 +154,7 @@ export class StartScene extends Container implements IScene {
 
     CHARACTERS.forEach((def, i) => {
       const card = new CharacterCard(def);
-      card.position.set(WIDTH / 2 + (i - (CHARACTERS.length - 1) / 2) * 430, 572);
+      card.position.set(WIDTH / 2 + (i - (CHARACTERS.length - 1) / 2) * 430, 548);
       card.on("pointertap", () => this.onCardTap(i));
       this.cards.push(card);
       this.addChild(card);
@@ -163,11 +163,11 @@ export class StartScene extends Container implements IScene {
     // selector de dificultad
     const diffLabel = new Text("DIFICULTAD (↑ ↓)", style({ fontSize: 24, strokeThickness: 5 }));
     diffLabel.anchor.set(1, 0.5);
-    diffLabel.position.set(WIDTH / 2 - 400, 892);
+    diffLabel.position.set(WIDTH / 2 - 400, 858);
     this.addChild(diffLabel);
     DIFFICULTIES.forEach((d, i) => {
       const b = new Graphics();
-      b.position.set(WIDTH / 2 - 250 + i * 250, 892);
+      b.position.set(WIDTH / 2 - 250 + i * 250, 858);
       const t = new Text(d.name, style({ fontSize: 32, strokeThickness: 6 }));
       t.anchor.set(0.5);
       b.addChild(t);
@@ -182,8 +182,8 @@ export class StartScene extends Container implements IScene {
       this.addChild(b);
     });
 
-    const play = new TextButton("▶  JUGAR", () => this.start(), { width: 400, height: 84, fontSize: 44 });
-    play.position.set(WIDTH / 2, 990);
+    const play = new TextButton("▶  JUGAR", () => this.start(), { width: 380, height: 74, fontSize: 40 });
+    play.position.set(WIDTH / 2, 980);
     this.addChild(play);
 
     const help = new Text(
