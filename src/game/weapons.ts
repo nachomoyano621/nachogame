@@ -46,7 +46,7 @@ export const WEAPONS: WeaponDef[] = [
   },
   {
     id: "shotgun", name: "ESCOPETA", price: 45, desc: "3 perdigones en abanico, de cerca.",
-    cooldown: 0.75, speed: 1400, bossDmg: 0.12, pellets: 3, spread: 0.2, pierce: 1, explosive: false, life: 0.45,
+    cooldown: 0.7, speed: 1500, bossDmg: 0.15, pellets: 3, spread: 0.18, pierce: 1, explosive: false, life: 0.6,
     stats: { poder: 4, cadencia: 2 }, tex: () => WpArt.shotgun, anchor: [46 / 144, 20 / 40], bullet: () => WpArt.pellet,
   },
   {

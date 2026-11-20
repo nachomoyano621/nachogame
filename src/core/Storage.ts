@@ -27,9 +27,11 @@ interface SaveData {
   records: Record<string, RecordEntry[]>;
   /** Últimas iniciales usadas. */
   lastName: string;
+  /** Personajes desbloqueados. */
+  unlocked: string[];
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "" };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [] };
 
 function read(): SaveData {
   try {
@@ -95,6 +97,18 @@ export const Storage = {
   },
   setLastName(name: string): void {
     write({ lastName: name });
+  },
+  isUnlocked(id: string): boolean {
+    return read().unlocked.includes(id);
+  },
+  /** Devuelve true si es nuevo. */
+  unlock(id: string): boolean {
+    const list = read().unlocked;
+    if (list.includes(id)) {
+      return false;
+    }
+    write({ unlocked: [...list, id] });
+    return true;
   },
   get character(): string {
     return read().character;

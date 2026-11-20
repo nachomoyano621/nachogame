@@ -42,6 +42,8 @@ export class WinScene extends Container implements IScene {
   private readonly heroBaseScale: number;
   private ready = 0.8;
   private records!: RecordGate;
+  private unlockIcon: AnimatedSprite | null = null;
+  private unlockText: Text | null = null;
   private t = 0;
   private fireworkT = 0.2;
 
@@ -140,6 +142,29 @@ export class WinScene extends Container implements IScene {
     const menu = new TextButton("☰  MENÚ (ESC)", () => this.menu(), { width: 520, color: 0x29b6f6 });
     menu.position.set(1390, 930);
     this.addChild(retry, menu);
+
+    // premio: personaje desbloqueado
+    if (stats.unlocked) {
+      const unlockDef = getCharacter("rojinegro");
+      const ribbon = new Graphics();
+      ribbon.beginFill(0x000000, 0.75);
+      ribbon.drawRoundedRect(WIDTH / 2 - 700, 995, 1400, 74, 20);
+      ribbon.endFill();
+      ribbon.lineStyle(4, 0xff1744);
+      ribbon.drawRoundedRect(WIDTH / 2 - 700, 995, 1400, 74, 20);
+      const icon = new AnimatedSprite(unlockDef.frames(), false);
+      icon.anchor.set(0.5, 1);
+      icon.scale.set(scaleFor(unlockDef, unlockDef.frames()) * 0.42);
+      icon.position.set(WIDTH / 2 - 640, 1064);
+      icon.animationSpeed = 0.25;
+      icon.play();
+      this.unlockIcon = icon;
+      const txt = new Text(`🔓 ¡DESBLOQUEASTE A ${stats.unlocked}!  Elegilo en el menú`, style({ fontSize: 38, fill: ["#ffffff", "#ff8a80"], strokeThickness: 7 }));
+      txt.anchor.set(0.5);
+      txt.position.set(WIDTH / 2 + 30, 1032);
+      this.unlockText = txt;
+      this.addChild(ribbon, icon, txt);
+    }
 
     Keyboard.down.on("key", this.onKey, this);
     // TOP 5: pedir iniciales si entró (va arriba de todo)
@@ -262,6 +287,8 @@ export class WinScene extends Container implements IScene {
     this.t += dt;
     this.ready -= dt;
     this.records.update(dt);
+    this.unlockIcon?.update(dt * 60);
+    this.unlockText?.scale.set(1 + Math.sin(this.t * 5) * 0.04);
 
     // reflectores que se mueven
     this.lights.clear();

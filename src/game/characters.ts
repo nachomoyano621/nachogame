@@ -1,7 +1,7 @@
 import { Texture } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 
-export type CharacterId = "vikingo" | "ninja" | "robot" | "astro";
+export type CharacterId = "vikingo" | "ninja" | "robot" | "astro" | "rojinegro";
 
 export interface CharacterDef {
   id: CharacterId;
@@ -25,6 +25,8 @@ export interface CharacterDef {
   accent: number;
   stats: { velocidad: number; salto: number; vidas: number };
   frames: () => Texture[];
+  /** Si está, hay que desbloquearlo: texto de cómo hacerlo. */
+  unlock?: string;
 }
 
 export const CHARACTERS: CharacterDef[] = [
@@ -79,7 +81,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "astro",
     name: "CAPITÁN ASTRO",
-    desc: "Mantené apretado el salto en el aire para PLANEAR con la mochila cohete.",
+    desc: "Mantené el salto en el aire para PLANEAR con su mochila cohete.",
     speed: 420,
     jump: 1040,
     maxJumps: 2,
@@ -92,6 +94,23 @@ export const CHARACTERS: CharacterDef[] = [
     accent: 0xffab40,
     stats: { velocidad: 3, salto: 4, vidas: 3 },
     frames: () => Art.astro,
+  },
+  {
+    id: "rojinegro",
+    name: "TOMI ROJINEGRO",
+    desc: "El premio por vencer al DINO-X: rápido, salta alto y tiene 4 vidas.",
+    speed: 480,
+    jump: 1090,
+    maxJumps: 2,
+    lives: 4,
+    startShield: false,
+    height: 172,
+    hitbox: { w: 62, h: 126 },
+    runCycle: true,
+    accent: 0xff1744,
+    stats: { velocidad: 4, salto: 4, vidas: 4 },
+    frames: () => Art.rojinegro,
+    unlock: "Ganale al DINO-X para desbloquearlo",
   },
 ];
 

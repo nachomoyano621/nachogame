@@ -20,7 +20,7 @@ import { Background, LEVEL_NAMES } from "../game/Background";
 import { AcidBall, Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
 import { Bullet, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
 import { Shop } from "../ui/Shop";
-import { CharacterDef } from "../game/characters";
+import { CharacterDef, getCharacter } from "../game/characters";
 import { Effects } from "../game/Effects";
 import { Bat, Boulder, DinoSkater, Enemy, EnemyCtx, Meteor, Mosasaur, MosquitoEnemy, Rex } from "../game/enemies";
 import { WORLD_ENEMIES } from "../game/worldEnemies";
@@ -1250,6 +1250,10 @@ export class GameScene extends Container implements IScene {
     };
     if (won) {
       Storage.saveRun(null);
+      // premio: el personaje rojinegro
+      if (this.bossDefeated && Storage.unlock("rojinegro")) {
+        stats.unlocked = getCharacter("rojinegro").name;
+      }
     } else {
       // para CONTINUAR desde este mundo (si quedan fichas)
       const run: RunState = {

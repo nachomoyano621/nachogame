@@ -44,6 +44,8 @@ export interface GameStats {
   newRecord: boolean;
   /** Identifica la partida (un récord por partida, aunque continúe). */
   runId: string;
+  /** Nombre del personaje que se desbloqueó con esta partida (si hubo). */
+  unlocked?: string;
   /** Para continuar (sólo en Game Over y si quedan fichas). */
   run?: RunState;
 }

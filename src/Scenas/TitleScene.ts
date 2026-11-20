@@ -183,7 +183,7 @@ export class TitleScene extends Container implements IScene {
     this.addChild(edge);
     this.addChild(this.dust);
 
-    // desfile: los 4 héroes adelante, saltando; atrás los monstruos de todos los mundos persiguiéndolos.
+    // desfile: los héroes adelante, saltando; atrás los monstruos de todos los mundos persiguiéndolos.
     // `facesLeft`: el dibujo original mira a la izquierda y hay que darlo vuelta para que corra a la derecha.
     const add = (frames: Texture[], height: number, x: number, o: { facesLeft?: boolean; fly?: number; hero?: boolean } = {}): void => {
       const shadow = new Graphics();
@@ -202,7 +202,7 @@ export class TitleScene extends Container implements IScene {
       this.addChild(spr);
       this.runners.push({ spr, shadow, fly: o.fly ?? 0, hero: !!o.hero, vy: 0, hopT: Math.random() * 1.5 });
     };
-    CHARACTERS.forEach((def, i) => add(def.frames(), def.height, 1000 - i * 165, { hero: true }));
+    CHARACTERS.filter((c) => !c.unlock || Storage.isUnlocked(c.id)).forEach((def, i) => add(def.frames(), def.height, 1160 - i * 165, { hero: true }));
     add([Texture.from("dino1"), Texture.from("dino2")], 165, 330);
     add(WArt.scorpion, 80, 160, { facesLeft: true });
     add(WArt.crab, 76, 30);

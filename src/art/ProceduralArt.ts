@@ -9,6 +9,7 @@ export interface ArtBank {
   ninja: Texture[];
   robot: Texture[];
   astro: Texture[];
+  rojinegro: Texture[];
   meteor: Texture;
   acid: Texture;
   mosasaur: Texture[];
@@ -125,6 +126,72 @@ function drawNinja(g: Graphics, p: number): void {
   g.endFill();
 
   arm(g, 66, 74 - b, -s, body, dark);
+}
+
+/** Jugador con camiseta a bastones rojos y negros (desbloqueable). Diseño propio. */
+function drawRojinegro(g: Graphics, p: number): void {
+  const s = Math.sin(p * Math.PI * 2);
+  const c = Math.cos(p * Math.PI * 2);
+  const red = 0xd50000;
+  const black = 0x161616;
+  const skin = 0xe0ac69;
+  const sock = 0xd50000;
+  const b = Math.abs(c) * 4;
+
+  // pierna de atrás (media roja, botín negro)
+  leg(g, 56, 112 - b, -s, sock, 28, 12);
+  arm(g, 54, 72 - b, s, red, skin);
+
+  // short negro
+  g.beginFill(black);
+  g.drawRoundedRect(40, 100 - b, 42, 22, 6);
+  g.endFill();
+
+  // camiseta a bastones
+  g.beginFill(red);
+  g.drawRoundedRect(40, 60 - b, 42, 46, 12);
+  g.endFill();
+  g.beginFill(black);
+  for (const x of [47, 59, 71]) {
+    g.drawRect(x, 62 - b, 6, 42);
+  }
+  g.endFill();
+  // cuello blanco y número
+  g.beginFill(0xffffff);
+  g.drawPolygon([53, 60 - b, 69, 60 - b, 61, 68 - b]);
+  g.endFill();
+
+  // pierna de adelante
+  leg(g, 66, 112 - b, s, sock, 28, 12);
+  // botines
+  g.beginFill(black);
+  const fx = 66 + Math.sin(s * 0.75) * 28 + Math.sin(s * 0.75 - 0.2 - Math.max(0, -s) * 0.9) * 28;
+  const fy = 112 - b + Math.cos(s * 0.75) * 28 + Math.cos(s * 0.75 - 0.2 - Math.max(0, -s) * 0.9) * 28;
+  g.drawEllipse(fx + 5, fy + 2, 11, 6);
+  g.endFill();
+
+  // cabeza
+  g.beginFill(skin);
+  g.drawCircle(62, 40 - b, 20);
+  g.endFill();
+  // pelo negro con jopo
+  g.beginFill(0x2b1b10);
+  g.drawPolygon([42, 38 - b, 46, 22 - b, 58, 16 - b, 74, 16 - b, 84, 26 - b, 82, 32 - b, 64, 26 - b, 50, 30 - b, 46, 40 - b]);
+  g.endFill();
+  // ojos y sonrisa
+  g.beginFill(0x000000);
+  g.drawCircle(69, 39 - b, 2.8);
+  g.drawCircle(78, 39 - b, 2.8);
+  g.endFill();
+  g.lineStyle({ width: 2.5, color: 0x6d2b1a, cap: LINE_CAP.ROUND });
+  g.arc(72, 46 - b, 6, 0.3, Math.PI - 0.6);
+  g.lineStyle(0);
+  // vincha roja
+  g.beginFill(red);
+  g.drawRect(43, 27 - b, 40, 5);
+  g.endFill();
+
+  arm(g, 68, 72 - b, -s, red, skin);
 }
 
 function drawRobot(g: Graphics, p: number): void {
@@ -612,6 +679,7 @@ export function buildArt(r: AbstractRenderer): void {
   Art.ninja = frames(8, (g, i) => drawNinja(g, i / 8), new Rectangle(0, 0, 120, 170));
   Art.robot = frames(8, (g, i) => drawRobot(g, i / 8), new Rectangle(0, -6, 130, 176));
   Art.astro = frames(8, (g, i) => drawAstro(g, i / 8), new Rectangle(0, -8, 130, 178));
+  Art.rojinegro = frames(8, (g, i) => drawRojinegro(g, i / 8), new Rectangle(0, 0, 124, 172));
   Art.meteor = bake(gfx(drawMeteor), new Rectangle(-60, -60, 120, 120));
   Art.acid = bake(
     gfx((g) => {

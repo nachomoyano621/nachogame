@@ -12,7 +12,7 @@ import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
 
-const CARD_W = 380;
+const CARD_W = 340;
 const CARD_H = 520;
 
 class CharacterCard extends Container {
@@ -21,9 +21,14 @@ class CharacterCard extends Container {
   private readonly baseScale: number;
   private selected = false;
   private t = Math.random() * 3;
+  private shakeT = 0;
+  /** Todavía no se puede elegir (hay que desbloquearlo). */
+  public readonly locked: boolean;
+  private desc!: Text;
 
   constructor(public readonly def: CharacterDef) {
     super();
+    this.locked = !!def.unlock && !Storage.isUnlocked(def.id);
     this.addChild(this.panel);
 
     const frames = def.frames();
@@ -40,10 +45,21 @@ class CharacterCard extends Container {
     name.y = -44;
     this.addChild(name);
 
-    const desc = new Text(def.desc, style({ fontSize: 22, strokeThickness: 0, wordWrap: true, wordWrapWidth: CARD_W - 50, align: "center", fill: "#eceff1" }));
+    const desc = new Text(this.locked ? `🔒 ${def.unlock ?? ""}` : def.desc, style({ fontSize: 22, strokeThickness: 0, wordWrap: true, wordWrapWidth: CARD_W - 50, align: "center", fill: "#eceff1" }));
     desc.anchor.set(0.5, 0);
     desc.y = 2;
     this.addChild(desc);
+    this.desc = desc;
+    if (this.locked) {
+      // silueta negra con candado
+      this.preview.tint = 0x000000;
+      this.preview.alpha = 0.85;
+      desc.style.fill = "#ff8a80";
+      const lock = new Text("🔒", style({ fontSize: 70, strokeThickness: 0 }));
+      lock.anchor.set(0.5);
+      lock.position.set(0, -150);
+      this.addChild(lock);
+    }
 
     const rows: [string, number][] = [
       ["VELOCIDAD", def.stats.velocidad],
@@ -59,7 +75,7 @@ class CharacterCard extends Container {
       const pips = new Graphics();
       for (let p = 0; p < 5; p++) {
         pips.beginFill(p < value ? def.accent : 0xffffff, p < value ? 1 : 0.18);
-        pips.drawRoundedRect(p * 34, -10, 28, 20, 6);
+        pips.drawRoundedRect(p * 30, -10, 25, 20, 6);
         pips.endFill();
       }
       pips.position.set(10, y);
@@ -69,6 +85,11 @@ class CharacterCard extends Container {
     this.interactive = true;
     this.cursor = "pointer";
     this.draw();
+  }
+
+  /** Intentó jugar con un personaje bloqueado. */
+  public deny(): void {
+    this.shakeT = 0.45;
   }
 
   public setSelected(s: boolean): void {
@@ -98,6 +119,14 @@ class CharacterCard extends Container {
     const s = this.scale.x + (target - this.scale.x) * Math.min(1, dt * 10);
     this.scale.set(s);
     this.alpha = this.selected ? 1 : 0.8;
+    if (this.shakeT > 0) {
+      this.shakeT -= dt;
+      this.pivot.x = Math.sin(this.t * 60) * 12 * Math.max(0, this.shakeT) * 2;
+      this.desc.scale.set(1 + Math.max(0, this.shakeT) * 0.3);
+    } else {
+      this.pivot.x = 0;
+      this.desc.scale.set(1);
+    }
     this.preview.y = -58 - (this.selected ? Math.abs(Math.sin(this.t * 3)) * 18 : 0);
   }
 }
@@ -161,7 +190,7 @@ export class StartScene extends Container implements IScene {
 
     CHARACTERS.forEach((def, i) => {
       const card = new CharacterCard(def);
-      card.position.set(WIDTH / 2 + (i - (CHARACTERS.length - 1) / 2) * 430, 548);
+      card.position.set(WIDTH / 2 + (i - (CHARACTERS.length - 1) / 2) * 365, 548);
       card.on("pointertap", () => this.onCardTap(i));
       this.cards.push(card);
       this.addChild(card);
@@ -288,6 +317,11 @@ export class StartScene extends Container implements IScene {
 
   private start(): void {
     const def = CHARACTERS[this.selected];
+    if (this.cards[this.selected].locked) {
+      this.cards[this.selected].deny();
+      Sfx.hurt();
+      return;
+    }
     const diff = DIFFICULTIES[this.diffIdx];
     Storage.setCharacter(def.id);
     Storage.setDifficulty(diff.id);

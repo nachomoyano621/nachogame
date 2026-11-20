@@ -153,7 +153,7 @@ export class Hud extends Container {
 
     this.hint = new Text("", style({ fontSize: 30, align: "center" }));
     this.hint.anchor.set(0.5);
-    this.hint.position.set(WIDTH / 2, 200);
+    this.hint.position.set(WIDTH / 2, 268);
     this.addChild(this.hint);
 
     this.banner = new Text("", style({ fontSize: 110, fill: ["#fff176", "#ff6f00"], stroke: "#3e0000", strokeThickness: 12 }));
