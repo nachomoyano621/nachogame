@@ -7,6 +7,7 @@ import { Effects } from "../game/Effects";
 import { getCharacter, scaleFor } from "../game/characters";
 import { GameStats, START_CREDITS } from "../game/types";
 import { TextButton } from "../ui/Button";
+import { RecordGate } from "../ui/RecordsOverlay";
 import { StatsPanel } from "../ui/StatsPanel";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
@@ -26,6 +27,7 @@ export class FinalScene extends Container implements IScene {
   private readonly stars = new Container();
   private readonly fx = new Effects();
   private ready = 0.6; // evita saltear la pantalla con una tecla que venía apretada
+  private records!: RecordGate;
   private t = 0;
   private glitchT = 0;
 
@@ -134,10 +136,12 @@ export class FinalScene extends Container implements IScene {
     }
 
     Keyboard.down.on("key", this.onKey, this);
+    // TOP 5: pedir iniciales si entró (va arriba de todo)
+    this.records = new RecordGate(this, stats, WIDTH / 2 + 440, 430);
   }
 
   private onKey(code: string): void {
-    if (this.ready > 0) {
+    if (this.ready > 0 || this.records.busy) {
       return;
     }
     if (code === "Enter" || code === "NumpadEnter" || code === "Space" || code === "KeyC") {
@@ -178,6 +182,7 @@ export class FinalScene extends Container implements IScene {
     const dt = dtMS / 1000;
     this.t += dt;
     this.ready -= dt;
+    this.records.update(dt);
     this.panel.update(dt);
     this.fx.update(dt);
 

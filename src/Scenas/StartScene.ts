@@ -7,6 +7,7 @@ import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { CHARACTERS, CharacterDef, scaleFor } from "../game/characters";
 import { TextButton } from "../ui/Button";
+import { RecordsOverlay } from "../ui/RecordsOverlay";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
@@ -113,6 +114,7 @@ export class StartScene extends Container implements IScene {
   private readonly worldName: Text;
   private worldIdx = 0;
   private worldT = 0;
+  private records: RecordsOverlay | null = null;
 
   constructor() {
     super();
@@ -153,6 +155,9 @@ export class StartScene extends Container implements IScene {
     this.bestText.anchor.set(1, 0);
     this.bestText.position.set(WIDTH - 28, 24);
     this.addChild(this.bestText);
+    const top = new TextButton("🏆 TOP 5 (T)", () => this.openRecords(), { width: 270, height: 60, fontSize: 26, color: 0xd32f2f });
+    top.position.set(WIDTH - 165, 112);
+    this.addChild(top);
 
     CHARACTERS.forEach((def, i) => {
       const card = new CharacterCard(def);
@@ -189,7 +194,7 @@ export class StartScene extends Container implements IScene {
     this.addChild(play);
 
     const help = new Text(
-      "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F lanzar cráneo  ·  P pausa  ·  M sonido",
+      "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F disparar / lanzar cráneo  ·  T récords  ·  P pausa  ·  M sonido",
       style({ fontSize: 22, strokeThickness: 4 }),
     );
     help.anchor.set(0.5);
@@ -204,8 +209,33 @@ export class StartScene extends Container implements IScene {
     Keyboard.down.on("key", this.onKey, this);
   }
 
+  private openRecords(): void {
+    if (this.records) {
+      return;
+    }
+    this.records = new RecordsOverlay({
+      difficulty: DIFFICULTIES[this.diffIdx].id,
+      switchable: true,
+      onClose: () => {
+        const o = this.records;
+        if (o) {
+          this.removeChild(o);
+          o.destroy({ children: true });
+        }
+        // se suelta en el próximo cuadro: el ENTER que cerró la tabla no arranca la partida
+        setTimeout(() => (this.records = null), 250);
+      },
+    });
+    this.addChild(this.records);
+  }
+
   private onKey(code: string): void {
-    if (code === "ArrowLeft" || code === "KeyA") {
+    if (this.records) {
+      return;
+    }
+    if (code === "KeyT") {
+      this.openRecords();
+    } else if (code === "ArrowLeft" || code === "KeyA") {
       this.select(this.selected - 1);
     } else if (code === "ArrowRight" || code === "KeyD") {
       this.select(this.selected + 1);
@@ -274,6 +304,9 @@ export class StartScene extends Container implements IScene {
   public update(dtMS: number): void {
     const dt = dtMS / 1000;
     this.t += dt;
+    if (this.records && !this.records.destroyed) {
+      this.records.update(dt);
+    }
     this.bg.update(dt, 240);
     this.worldT += dt;
     if (this.worldT >= 4) {

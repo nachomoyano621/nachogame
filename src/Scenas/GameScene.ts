@@ -15,6 +15,7 @@ import { AudioCtl } from "../core/AudioCtl";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
+import { newRunId } from "../core/Records";
 import { Background, LEVEL_NAMES } from "../game/Background";
 import { AcidBall, Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
 import { Bullet, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
@@ -137,6 +138,8 @@ export class GameScene extends Container implements IScene {
   private shop: Shop | null = null;
   private afterShop: (() => void) | null = null;
   private gunHintShown = false;
+  /** Identifica la partida (un solo récord aunque continúe). */
+  private runId = newRunId();
 
   constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState) {
     super();
@@ -195,6 +198,7 @@ export class GameScene extends Container implements IScene {
     this.elapsed = run.elapsed;
     this.bossesBeaten = run.bosses;
     this.credits = run.credits;
+    this.runId = run.runId ?? this.runId;
     this.hud.setScore(this.score);
     this.hud.setLevel(this.level);
     this.hud.setCoins(0, this.level === WORLDS);
@@ -1242,12 +1246,14 @@ export class GameScene extends Container implements IScene {
       bossDefeated: this.bossDefeated,
       best: Math.max(best, this.score),
       newRecord,
+      runId: this.runId,
     };
     if (won) {
       Storage.saveRun(null);
     } else {
       // para CONTINUAR desde este mundo (si quedan fichas)
       const run: RunState = {
+        runId: this.runId,
         characterId: this.def.id,
         difficulty: this.diff.id,
         world: this.level,

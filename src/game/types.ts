@@ -9,6 +9,8 @@ export const START_CREDITS = 3;
  * (desde el mismo mundo, conservando billetera, puntos y jefes vencidos).
  */
 export interface RunState {
+  /** Identifica la partida (para que continuar no duplique el récord). */
+  runId?: string;
   characterId: CharacterId;
   difficulty: DifficultyId;
   /** Mundo donde se cayó (1..7). */
@@ -40,6 +42,8 @@ export interface GameStats {
   bosses: number;
   best: number;
   newRecord: boolean;
+  /** Identifica la partida (un récord por partida, aunque continúe). */
+  runId: string;
   /** Para continuar (sólo en Game Over y si quedan fichas). */
   run?: RunState;
 }

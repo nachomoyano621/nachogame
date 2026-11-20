@@ -1,5 +1,18 @@
 import type { RunState } from "../game/types";
 
+/** Una fila del TOP 5. */
+export interface RecordEntry {
+  /** runId de la partida. */
+  id: string;
+  name: string;
+  score: number;
+  character: string;
+  /** Mundo al que llegó (8 = laboratorio). */
+  world: number;
+  won: boolean;
+  date: number;
+}
+
 const KEY = "tomigame.v2";
 
 interface SaveData {
@@ -10,9 +23,13 @@ interface SaveData {
   character: string;
   /** Partida guardada para CONTINUAR (null = no hay). */
   run: RunState | null;
+  /** TOP 5 por dificultad. */
+  records: Record<string, RecordEntry[]>;
+  /** Últimas iniciales usadas. */
+  lastName: string;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "" };
 
 function read(): SaveData {
   try {
@@ -66,6 +83,18 @@ export const Storage = {
   },
   saveRun(run: RunState | null): void {
     write({ run });
+  },
+  records(difficulty: string): RecordEntry[] {
+    return read().records[difficulty] ?? [];
+  },
+  setRecords(difficulty: string, list: RecordEntry[]): void {
+    write({ records: { ...read().records, [difficulty]: list } });
+  },
+  get lastName(): string {
+    return read().lastName;
+  },
+  setLastName(name: string): void {
+    write({ lastName: name });
   },
   get character(): string {
     return read().character;

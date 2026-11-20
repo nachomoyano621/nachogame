@@ -7,6 +7,7 @@ import { Effects } from "../game/Effects";
 import { getCharacter, scaleFor } from "../game/characters";
 import { GameStats } from "../game/types";
 import { TextButton } from "../ui/Button";
+import { RecordGate } from "../ui/RecordsOverlay";
 import { StatsPanel } from "../ui/StatsPanel";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
@@ -40,6 +41,7 @@ export class WinScene extends Container implements IScene {
   private readonly panel: StatsPanel;
   private readonly heroBaseScale: number;
   private ready = 0.8;
+  private records!: RecordGate;
   private t = 0;
   private fireworkT = 0.2;
 
@@ -140,6 +142,8 @@ export class WinScene extends Container implements IScene {
     this.addChild(retry, menu);
 
     Keyboard.down.on("key", this.onKey, this);
+    // TOP 5: pedir iniciales si entró (va arriba de todo)
+    this.records = new RecordGate(this, stats, 1390, 320);
   }
 
   private buildTrophy(): void {
@@ -235,7 +239,7 @@ export class WinScene extends Container implements IScene {
   }
 
   private onKey(code: string): void {
-    if (this.ready > 0) {
+    if (this.ready > 0 || this.records.busy) {
       return;
     }
     if (code === "Enter" || code === "NumpadEnter" || code === "Space") {
@@ -257,6 +261,7 @@ export class WinScene extends Container implements IScene {
     const dt = dtMS / 1000;
     this.t += dt;
     this.ready -= dt;
+    this.records.update(dt);
 
     // reflectores que se mueven
     this.lights.clear();
