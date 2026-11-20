@@ -270,6 +270,13 @@ export class Sfx {
     }
   }
 
+  /** "¡Buuuu!" de los fantasmas. */
+  public static boo(): void {
+    Sfx.tone(520, 300, 0.55, "sine", 0.09);
+    Sfx.tone(780, 450, 0.55, "sine", 0.05, 0.05);
+    Sfx.tone(300, 220, 0.4, "triangle", 0.05, 0.25);
+  }
+
   /** Disparo según el arma. */
   public static shoot(kind: string): void {
     switch (kind) {

@@ -12,6 +12,7 @@ export interface WeaponArtBank {
   rocket: Texture;
   shuriken: Texture;
   ball: Texture;
+  ghost: Texture;
 }
 
 export const WpArt = {} as WeaponArtBank;
@@ -175,6 +176,42 @@ function drawBall(g: Graphics): void {
   g.endFill();
 }
 
+/** Fantasmita: cuerpo blanco con borde ondulado, ojos y boca de "¡buuu!". */
+function drawGhost(g: Graphics): void {
+  g.beginFill(0xb3e5fc, 0.35);
+  g.drawCircle(0, -2, 40);
+  g.endFill();
+  g.lineStyle(3, 0x90a4ae, 0.9);
+  g.beginFill(0xfafafa);
+  g.moveTo(-26, 30);
+  g.lineTo(-26, -8);
+  g.arc(0, -8, 26, Math.PI, 0);
+  g.lineTo(26, 30);
+  // borde de abajo ondulado
+  const waves = 4;
+  for (let i = 0; i < waves; i++) {
+    const x0 = 26 - (i * 52) / waves;
+    const x1 = 26 - ((i + 1) * 52) / waves;
+    g.quadraticCurveTo((x0 + x1) / 2, i % 2 === 0 ? 20 : 38, x1, 30);
+  }
+  g.closePath();
+  g.endFill();
+  g.lineStyle(0);
+  g.beginFill(0x263238);
+  g.drawEllipse(-9, -10, 5, 7);
+  g.drawEllipse(9, -10, 5, 7);
+  g.drawEllipse(0, 6, 6, 8);
+  g.endFill();
+  g.beginFill(0xffffff);
+  g.drawCircle(-8, -12, 2);
+  g.drawCircle(10, -12, 2);
+  g.endFill();
+  g.beginFill(0xf48fb1, 0.6);
+  g.drawCircle(-17, 2, 4);
+  g.drawCircle(17, 2, 4);
+  g.endFill();
+}
+
 export function buildWeaponArt(r: AbstractRenderer): void {
   const bake = (draw: (g: Graphics) => void, region: Rectangle): Texture => {
     const g = new Graphics();
@@ -193,4 +230,5 @@ export function buildWeaponArt(r: AbstractRenderer): void {
   WpArt.rocket = bake(drawRocket, new Rectangle(-30, -14, 56, 28));
   WpArt.shuriken = bake(drawShuriken, new Rectangle(-22, -22, 44, 44));
   WpArt.ball = bake(drawBall, new Rectangle(-23, -23, 46, 46));
+  WpArt.ghost = bake(drawGhost, new Rectangle(-42, -44, 84, 88));
 }

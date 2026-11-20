@@ -2,11 +2,12 @@ import { Sfx } from "./Sfx";
 
 /**
  * Música chiptune generada por código (WebAudio). Cada tema tiene tempo, escala, acordes,
- * instrumentos y batería propios; la melodía se compone una vez con una semilla fija,
- * así cada tema suena siempre igual y es reconocible.
+ * instrumentos y batería propios, y se compone como una canción con partes
+ * (intro, tema A, variación, parte B, quiebre, solo, tema final con cambio de tono).
+ * Cada vuelta se recompone con otra semilla y otro tono: dura toda la pantalla sin repetirse igual.
  */
 
-type Drums = "rock" | "soft" | "march" | "tribal" | "techno" | "double" | "none";
+type Drums = "rock" | "soft" | "march" | "tribal" | "techno" | "double" | "funk" | "half" | "none";
 
 interface TrackDef {
   bpm: number;
@@ -15,7 +16,11 @@ interface TrackDef {
   scale: number[];
   /** Grados de la escala de los 4 acordes (uno por compás). */
   chords: number[];
+  /** Acordes de la parte B (si no, se derivan). */
+  chordsB?: number[];
   lead: OscillatorType;
+  /** Instrumento de la parte B y el solo. */
+  lead2?: OscillatorType;
   bass: OscillatorType;
   drums: Drums;
   seed: number;
@@ -26,6 +31,12 @@ interface TrackDef {
   leadVol?: number;
   /** Bajo en corcheas (más movido). */
   busyBass?: boolean;
+  /** Bajo funk sincopado con saltos de octava. */
+  funkBass?: boolean;
+  /** Coro fantasmal "uuuh" (notas largas con vibrato). */
+  ooh?: boolean;
+  /** Tema corto que se repite tal cual (pantallas de fin). */
+  short?: boolean;
 }
 
 const MAJOR = [0, 2, 4, 5, 7, 9, 11];
@@ -33,27 +44,29 @@ const MINOR = [0, 2, 3, 5, 7, 8, 10];
 const HARMONIC = [0, 2, 3, 5, 7, 8, 11];
 const DORIAN = [0, 2, 3, 5, 7, 9, 10];
 const MIXO = [0, 2, 4, 5, 7, 9, 10];
-const PHRYG_DOM = [0, 1, 4, 5, 7, 8, 10];
 const WHOLE = [0, 2, 4, 6, 8, 10];
 
 const BUSY = [1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0];
 const MEDIUM = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0];
 const SLOW = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0];
 const BOUNCY = [1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0];
+const FUNKY = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0];
 
 export const TRACKS: Record<string, TrackDef> = {
-  title: { bpm: 132, root: 62, scale: MIXO, chords: [0, 6, 3, 0], lead: "square", bass: "triangle", drums: "rock", seed: 11, rhythm: MEDIUM, busyBass: true },
-  select: { bpm: 112, root: 65, scale: MAJOR, chords: [0, 5, 3, 4], lead: "triangle", bass: "triangle", drums: "soft", seed: 23, rhythm: MEDIUM, arp: true },
-  world2: { bpm: 100, root: 62, scale: PHRYG_DOM, chords: [0, 0, 1, 0], lead: "sawtooth", bass: "triangle", drums: "tribal", seed: 37, rhythm: MEDIUM, leadVol: 0.6 },
-  world3: { bpm: 92, root: 67, scale: MAJOR, chords: [0, 3, 5, 4], lead: "sine", bass: "triangle", drums: "soft", seed: 41, rhythm: SLOW, swing: 0.22, arp: true },
-  world4: { bpm: 104, root: 57, scale: DORIAN, chords: [0, 3, 0, 4], lead: "triangle", bass: "sine", drums: "tribal", seed: 53, rhythm: MEDIUM },
-  world5: { bpm: 152, root: 52, scale: HARMONIC, chords: [0, 5, 6, 4], lead: "sawtooth", bass: "square", drums: "double", seed: 67, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
-  world6: { bpm: 120, root: 60, scale: WHOLE, chords: [0, 2, 4, 1], lead: "sine", bass: "sawtooth", drums: "techno", seed: 71, rhythm: MEDIUM, arp: true },
-  world7: { bpm: 140, root: 64, scale: MAJOR, chords: [0, 4, 5, 3], lead: "square", bass: "triangle", drums: "march", seed: 83, rhythm: BOUNCY },
-  boss: { bpm: 166, root: 57, scale: HARMONIC, chords: [0, 0, 5, 4], lead: "sawtooth", bass: "square", drums: "double", seed: 97, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
-  final: { bpm: 158, root: 50, scale: HARMONIC, chords: [0, 5, 1, 4], lead: "square", bass: "sawtooth", drums: "techno", seed: 101, rhythm: BUSY, busyBass: true },
-  win: { bpm: 128, root: 60, scale: MAJOR, chords: [0, 3, 4, 0], lead: "square", bass: "triangle", drums: "march", seed: 113, rhythm: MEDIUM, arp: true },
-  gameover: { bpm: 70, root: 57, scale: MINOR, chords: [0, 5, 3, 4], lead: "triangle", bass: "sine", drums: "none", seed: 127, rhythm: SLOW },
+  title: { bpm: 132, root: 62, scale: MIXO, chords: [0, 6, 3, 0], chordsB: [3, 4, 6, 4], lead: "square", lead2: "sawtooth", bass: "triangle", drums: "rock", seed: 11, rhythm: MEDIUM, busyBass: true },
+  select: { bpm: 112, root: 65, scale: MAJOR, chords: [0, 5, 3, 4], chordsB: [3, 0, 1, 4], lead: "triangle", lead2: "square", bass: "triangle", drums: "soft", seed: 23, rhythm: MEDIUM, arp: true },
+  world1: { bpm: 126, root: 60, scale: MAJOR, chords: [0, 4, 5, 3], chordsB: [5, 3, 0, 4], lead: "square", lead2: "triangle", bass: "triangle", drums: "rock", seed: 7, rhythm: BOUNCY, busyBass: true, arp: true },
+  // Desierto de los cráneos: funk fantasmal (tema original, estilo "cazafantasmas")
+  world2: { bpm: 116, root: 52, scale: DORIAN, chords: [0, 0, 6, 3], chordsB: [3, 4, 0, 6], lead: "square", lead2: "sawtooth", bass: "sawtooth", drums: "funk", seed: 37, rhythm: FUNKY, funkBass: true, ooh: true, leadVol: 0.7 },
+  world3: { bpm: 92, root: 67, scale: MAJOR, chords: [0, 3, 5, 4], chordsB: [5, 1, 4, 0], lead: "sine", lead2: "triangle", bass: "triangle", drums: "soft", seed: 41, rhythm: SLOW, swing: 0.22, arp: true },
+  world4: { bpm: 104, root: 57, scale: DORIAN, chords: [0, 3, 0, 4], chordsB: [5, 4, 3, 4], lead: "triangle", lead2: "square", bass: "sine", drums: "tribal", seed: 53, rhythm: MEDIUM },
+  world5: { bpm: 152, root: 52, scale: HARMONIC, chords: [0, 5, 6, 4], chordsB: [3, 0, 5, 4], lead: "sawtooth", lead2: "square", bass: "square", drums: "double", seed: 67, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
+  world6: { bpm: 120, root: 60, scale: WHOLE, chords: [0, 2, 4, 1], chordsB: [3, 1, 5, 2], lead: "sine", lead2: "triangle", bass: "sawtooth", drums: "techno", seed: 71, rhythm: MEDIUM, arp: true, ooh: true },
+  world7: { bpm: 140, root: 64, scale: MAJOR, chords: [0, 4, 5, 3], chordsB: [1, 4, 0, 5], lead: "square", lead2: "triangle", bass: "triangle", drums: "march", seed: 83, rhythm: BOUNCY },
+  boss: { bpm: 166, root: 57, scale: HARMONIC, chords: [0, 0, 5, 4], chordsB: [5, 6, 4, 4], lead: "sawtooth", lead2: "square", bass: "square", drums: "double", seed: 97, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
+  final: { bpm: 158, root: 50, scale: HARMONIC, chords: [0, 5, 1, 4], chordsB: [5, 3, 1, 4], lead: "square", lead2: "sawtooth", bass: "sawtooth", drums: "techno", seed: 101, rhythm: BUSY, busyBass: true },
+  win: { bpm: 128, root: 60, scale: MAJOR, chords: [0, 3, 4, 0], lead: "square", bass: "triangle", drums: "march", seed: 113, rhythm: MEDIUM, arp: true, short: true },
+  gameover: { bpm: 70, root: 57, scale: MINOR, chords: [0, 5, 3, 4], lead: "triangle", bass: "sine", drums: "none", seed: 127, rhythm: SLOW, short: true },
 };
 
 const DRUMS: Record<Drums, { kick: number[]; snare: number[]; hat: number[]; tom: number[] }> = {
@@ -63,17 +76,23 @@ const DRUMS: Record<Drums, { kick: number[]; snare: number[]; hat: number[]; tom
   tribal: { kick: [0, 8], snare: [], hat: [], tom: [0, 3, 6, 10, 12] },
   techno: { kick: [0, 4, 8, 12], snare: [4, 12], hat: [2, 6, 10, 14], tom: [] },
   double: { kick: [0, 2, 8, 10], snare: [4, 12], hat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], tom: [] },
+  funk: { kick: [0, 6, 10], snare: [4, 12], hat: [0, 2, 4, 6, 7, 8, 10, 12, 14, 15], tom: [] },
+  half: { kick: [0], snare: [8], hat: [0, 4, 8, 12], tom: [] },
   none: { kick: [], snare: [], hat: [], tom: [] },
 };
 
 interface Step {
   lead: number | null;
   leadLen: number;
+  leadType: OscillatorType;
   bass: number | null;
+  bassLen: number;
   arp: number | null;
+  ooh: number | null;
+  drums: Drums;
+  /** Redoble de cierre de parte. */
+  fill: boolean;
 }
-
-const BARS = 8;
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -86,63 +105,157 @@ function rng(seed: number): () => number {
 const midiFreq = (m: number): number => 440 * Math.pow(2, (m - 69) / 12);
 
 /** Nota MIDI del grado `deg` de la escala (admite grados fuera de rango: sube/baja octavas). */
-function degree(def: TrackDef, deg: number, octave = 0): number {
+function degree(def: TrackDef, deg: number, octave = 0, transpose = 0): number {
   const n = def.scale.length;
   const o = Math.floor(deg / n);
   const i = ((deg % n) + n) % n;
-  return def.root + def.scale[i] + 12 * (o + octave);
+  return def.root + transpose + def.scale[i] + 12 * (o + octave);
 }
 
-/** Compone el tema: 8 compases (melodía A en 1-4, A' en 5-8) a partir de la semilla. */
-function compose(def: TrackDef): Step[] {
-  const r = rng(def.seed);
-  const steps: Step[] = [];
-  const barA: (number | null)[][] = [];
-  let cur = def.chords[0] + def.scale.length; // arrancar una octava arriba
+/** Inventa 4 compases de melodía sobre 4 acordes (grados de escala, o null = silencio). */
+function melody(def: TrackDef, chords: number[], seed: number, rhythm: number[]): (number | null)[][] {
+  const r = rng(seed);
+  const n = def.scale.length;
+  const bars: (number | null)[][] = [];
+  let cur = chords[0] + n;
   for (let bar = 0; bar < 4; bar++) {
-    const chord = def.chords[bar];
+    const chord = chords[bar];
     const notes: (number | null)[] = [];
     for (let i = 0; i < 16; i++) {
-      if (!def.rhythm[i] || (r() < 0.12 && i % 4 !== 0)) {
+      if (!rhythm[i] || (r() < 0.12 && i % 4 !== 0)) {
         notes.push(null);
         continue;
       }
       if (i % 4 === 0) {
-        // tiempo fuerte: nota del acorde, cerca de la anterior
-        const tones = [chord, chord + 2, chord + 4].map((t) => t + def.scale.length);
+        const tones = [chord, chord + 2, chord + 4].map((t) => t + n);
         tones.sort((a, b) => Math.abs(a - cur) - Math.abs(b - cur));
         cur = tones[r() < 0.7 ? 0 : 1];
       } else {
         cur += [-2, -1, -1, 1, 1, 2][Math.floor(r() * 6)];
-        cur = Math.max(def.scale.length - 2, Math.min(def.scale.length * 2 + 2, cur));
+        cur = Math.max(n - 2, Math.min(n * 2 + 2, cur));
       }
       notes.push(cur);
     }
-    barA.push(notes);
+    bars.push(notes);
   }
-  for (let bar = 0; bar < BARS; bar++) {
-    const chord = def.chords[bar % 4];
-    let mel = barA[bar % 4];
-    if (bar === BARS - 1) {
-      // final de frase: termina en la tónica
-      mel = mel.map((n, i) => (n === null ? null : i >= 12 ? def.chords[0] + def.scale.length : n));
-    }
-    for (let i = 0; i < 16; i++) {
-      // duración: hasta la próxima nota
-      let len = 1;
-      while (i + len < 16 && mel[i + len] === null && len < 4) len++;
-      const bassOn = def.busyBass ? i % 2 === 0 : i === 0 || i === 8 || (i === 14 && bar % 2 === 1);
-      const bassDeg = def.busyBass && i % 4 === 2 ? chord + 4 : chord;
-      const arpTones = [chord, chord + 2, chord + 4, chord + 7];
-      steps.push({
-        lead: mel[i] === null ? null : degree(def, mel[i] as number),
-        leadLen: len,
-        bass: bassOn ? degree(def, bassDeg, -1) : null,
-        arp: def.arp ? degree(def, arpTones[i % 4], 1) : null,
-      });
+  return bars;
+}
+
+/** Variación: agrega notas de paso en algunos silencios y sube alguna nota. */
+function vary(bars: (number | null)[][], seed: number): (number | null)[][] {
+  const r = rng(seed);
+  return bars.map((bar) =>
+    bar.map((nt, i) => {
+      if (nt === null && i > 0 && bar[i - 1] !== null && r() < 0.35) return (bar[i - 1] as number) + (r() < 0.5 ? 1 : -1);
+      if (nt !== null && i % 4 === 2 && r() < 0.25) return nt + 2;
+      return nt;
+    }),
+  );
+}
+
+interface Part {
+  bars: number;
+  chords: number[];
+  mel: (number | null)[][] | null;
+  leadType: OscillatorType;
+  octave: number;
+  transpose: number;
+  drums: Drums;
+  arp: boolean;
+  bass: "normal" | "busy" | "funk" | "pedal";
+  ooh: boolean;
+}
+
+/**
+ * Compone una vuelta completa de la canción (~50 compases).
+ * `cycle` cambia semillas y tono para que la vuelta siguiente no sea igual.
+ */
+function compose(def: TrackDef, cycle = 0): Step[] {
+  const n = def.scale.length;
+  const seed = def.seed + cycle * 101;
+  const shift = [0, 2, -3, 5, -1][cycle % 5]; // cada vuelta en otro tono
+  const chordsA = def.chords;
+  const chordsB = def.chordsB ?? [chordsA[2], chordsA[3], chordsA[0], chordsA[1]];
+  const lead2 = def.lead2 ?? def.lead;
+  const bassMode = def.funkBass ? "funk" : def.busyBass ? "busy" : "normal";
+  const themeA = melody(def, chordsA, seed, def.rhythm);
+  const themeB = melody(def, chordsB, seed + 17, def.rhythm === SLOW ? MEDIUM : def.rhythm);
+  const solo = melody(def, chordsA, seed + 29, def.rhythm === SLOW ? MEDIUM : BUSY);
+  const sparse = melody(def, chordsB, seed + 43, SLOW);
+  const calmDrums: Drums = def.drums === "none" ? "none" : "half";
+  const P = (o: Partial<Part> & { bars: number; chords: number[] }): Part => ({
+    mel: null, leadType: def.lead, octave: 0, transpose: shift, drums: def.drums, arp: !!def.arp, bass: bassMode, ooh: false, ...o,
+  });
+  const parts: Part[] = def.short
+    ? [P({ bars: 8, chords: chordsA, mel: themeA, transpose: 0 })]
+    : [
+        P({ bars: 4, chords: chordsA, drums: calmDrums, arp: true, bass: "pedal" }), // intro
+        P({ bars: 8, chords: chordsA, mel: themeA, ooh: !!def.ooh }), // tema A
+        P({ bars: 8, chords: chordsA, mel: vary(themeA, seed + 5), arp: true }), // A con variación
+        P({ bars: 8, chords: chordsB, mel: themeB, leadType: lead2, ooh: !!def.ooh }), // parte B
+        P({ bars: 4, chords: chordsB, mel: sparse, octave: 1, drums: calmDrums, bass: "pedal", arp: true }), // quiebre
+        P({ bars: 8, chords: chordsA, mel: solo, leadType: lead2 }), // solo
+        P({ bars: 8, chords: chordsA, mel: vary(themeA, seed + 9), transpose: shift + 2, arp: true, ooh: !!def.ooh }), // tema final un tono arriba
+        P({ bars: 2, chords: [chordsA[3], chordsA[0]], drums: def.drums }), // remate
+      ];
+  const steps: Step[] = [];
+  for (const part of parts) {
+    for (let bar = 0; bar < part.bars; bar++) {
+      const chord = part.chords[bar % part.chords.length];
+      let mel = part.mel ? part.mel[bar % 4] : null;
+      if (mel && bar === part.bars - 1) {
+        // final de frase: termina en la tónica del acorde
+        mel = mel.map((nt, i) => (nt === null ? null : i >= 12 ? part.chords[0] + n : nt));
+      }
+      const lastBar = bar === part.bars - 1;
+      for (let i = 0; i < 16; i++) {
+        let len = 1;
+        if (mel) {
+          while (i + len < 16 && mel[i + len] === null && len < 4) len++;
+        }
+        let bassOn: boolean;
+        let bassDeg = chord;
+        let bassOct = -1;
+        let bassLen = 3.5;
+        if (part.bass === "busy") {
+          bassOn = i % 2 === 0;
+          if (i % 4 === 2) bassDeg = chord + 4;
+          bassLen = 1.6;
+        } else if (part.bass === "funk") {
+          // sincopado con saltos de octava
+          bassOn = [0, 3, 6, 8, 10, 11, 14].includes(i);
+          if (i === 6 || i === 14) bassOct = 0;
+          if (i === 10) bassDeg = chord + 4;
+          if (i === 11) bassDeg = chord + 5;
+          bassLen = i === 0 || i === 8 ? 1.8 : 0.9;
+        } else if (part.bass === "pedal") {
+          bassOn = i === 0;
+          bassLen = 14;
+        } else {
+          bassOn = i === 0 || i === 8 || (i === 14 && bar % 2 === 1);
+        }
+        const arpTones = [chord, chord + 2, chord + 4, chord + 7];
+        steps.push({
+          lead: mel && mel[i] !== null ? degree(def, mel[i] as number, part.octave, part.transpose) : null,
+          leadLen: len,
+          leadType: part.leadType,
+          bass: bassOn ? degree(def, bassDeg, bassOct, part.transpose) : null,
+          bassLen,
+          arp: part.arp ? degree(def, arpTones[i % 4], 1, part.transpose) : null,
+          ooh: part.ooh && i === 0 && bar % 2 === 0 ? degree(def, chord + n, 0, part.transpose) : null,
+          drums: part.drums,
+          fill: lastBar && i >= 12 && part.drums !== "none",
+        });
+      }
     }
   }
   return steps;
+}
+
+/** Duración (segundos) de una vuelta de un tema (para pruebas). */
+export function trackLength(name: string): number {
+  const def = TRACKS[name];
+  return def ? (compose(def).length * 60) / def.bpm / 4 : 0;
 }
 
 export class Music {
@@ -154,6 +267,7 @@ export class Music {
   private static def: TrackDef | null = null;
   private static steps: Step[] = [];
   private static stepIdx = 0;
+  private static cycle = 0;
   private static nextTime = 0;
   private static timer: number | null = null;
   private static muted = false;
@@ -207,7 +321,8 @@ export class Music {
     Music.stop();
     Music.current = name;
     Music.def = def;
-    Music.steps = compose(def);
+    Music.cycle = 0;
+    Music.steps = compose(def, 0);
     Music.stepIdx = 0;
     Music.trackGain = ctx.createGain();
     Music.trackGain.gain.value = 1;
@@ -251,19 +366,33 @@ export class Music {
       Music.nextTime = ctx.currentTime + 0.05;
     }
     while (Music.nextTime < ctx.currentTime + 0.12) {
-      const i = Music.stepIdx % Music.steps.length;
+      if (Music.stepIdx >= Music.steps.length) {
+        // terminó la vuelta: se recompone otra distinta (otra semilla y otro tono)
+        Music.stepIdx = 0;
+        if (!def.short) {
+          Music.cycle++;
+          Music.steps = compose(def, Music.cycle);
+        }
+      }
+      const i = Music.stepIdx;
       const st = Music.steps[i];
       const inBar = i % 16;
       const swing = def.swing && inBar % 2 === 1 ? sixteenth * def.swing : 0;
       const t = Music.nextTime + swing;
-      if (st.lead !== null) Music.note(def.lead, midiFreq(st.lead), t, sixteenth * st.leadLen * 0.9, 0.22 * (def.leadVol ?? 1));
-      if (st.bass !== null) Music.note(def.bass, midiFreq(st.bass), t, sixteenth * (def.busyBass ? 1.6 : 3.5), 0.28);
+      if (st.lead !== null) Music.note(st.leadType, midiFreq(st.lead), t, sixteenth * st.leadLen * 0.9, 0.22 * (def.leadVol ?? 1));
+      if (st.bass !== null) Music.note(def.bass, midiFreq(st.bass), t, sixteenth * st.bassLen, def.funkBass ? 0.22 : 0.28);
       if (st.arp !== null) Music.note("square", midiFreq(st.arp), t, sixteenth * 0.6, 0.05);
-      const d = DRUMS[def.drums];
+      if (st.ooh !== null) Music.ooh(midiFreq(st.ooh), t, sixteenth * 28);
+      const d = DRUMS[st.drums];
+      if (st.fill) {
+        Music.snare(t);
+        if (inBar % 2 === 1) Music.tom(t, inBar);
+      } else {
+        if (d.snare.includes(inBar)) Music.snare(t);
+        if (d.tom.includes(inBar)) Music.tom(t, inBar);
+      }
       if (d.kick.includes(inBar)) Music.kick(t);
-      if (d.snare.includes(inBar)) Music.snare(t);
-      if (d.hat.includes(inBar)) Music.hat(t, def.drums === "double" ? 0.04 : 0.07);
-      if (d.tom.includes(inBar)) Music.tom(t, inBar);
+      if (d.hat.includes(inBar)) Music.hat(t, st.drums === "double" ? 0.04 : 0.07);
       Music.nextTime += sixteenth;
       Music.stepIdx++;
     }
@@ -289,6 +418,33 @@ export class Music {
     g.connect(out);
     osc.start(t);
     osc.stop(t + dur + 0.02);
+  }
+
+  /** Coro fantasmal: nota larga, entrada lenta y vibrato ("uuuuh"). */
+  private static ooh(freq: number, t: number, dur: number): void {
+    const ctx = Music.ctx;
+    const out = Music.out();
+    if (!ctx || !out) return;
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq * 0.94, t);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.35);
+    lfo.frequency.value = 5.5;
+    lfoGain.gain.value = freq * 0.018;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g);
+    g.connect(out);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + dur + 0.05);
+    lfo.stop(t + dur + 0.05);
   }
 
   private static kick(t: number): void {

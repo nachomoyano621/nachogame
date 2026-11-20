@@ -30,6 +30,7 @@ import { Coin, POWER_LABEL, PowerKind, PowerUp, SkullPickup, ThrownSkull } from 
 import { WArt } from "../art/WorldArt";
 import { Player } from "../game/Player";
 import { Tutorial } from "../game/Tutorial";
+import { Ghost } from "../game/Ghost";
 import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { TouchControls } from "../ui/TouchControls";
@@ -93,6 +94,8 @@ export class GameScene extends Container implements IScene {
   private powerUps: PowerUp[] = [];
   private skulls: SkullPickup[] = [];
   private thrown: ThrownSkull[] = [];
+  /** Fantasmitas que salen del cráneo. */
+  private ghosts: Ghost[] = [];
   private carrying = false;
   private skullTimer = 1.5;
   private skullHintShown = false;
@@ -421,6 +424,7 @@ export class GameScene extends Container implements IScene {
     this.updatePowerUps(dt, worldSpeed);
     this.updateSkulls(dt, worldSpeed);
     this.updateBullets(dt);
+    this.updateGhosts(dt);
     this.fx.update(dt);
     this.updateShake(dt);
     this.drawDebug();
@@ -751,6 +755,7 @@ export class GameScene extends Container implements IScene {
     }
     const sk = new ThrownSkull(x0, y0, dir, vy);
     Achievements.add("skulls");
+    this.spawnGhosts(x0, y0, dir);
     this.thrown.push(sk);
     this.entities.addChild(sk);
     Sfx.throwIt();
@@ -769,7 +774,7 @@ export class GameScene extends Container implements IScene {
         this.fx.floatText(sk.x, sk.y - 90, "¡CRÁNEO!", "#fff3e0", 38);
         if (!this.skullHintShown) {
           this.skullHintShown = true;
-          this.hud.showHint("¡Agarraste un CRÁNEO!  Apretá F (o X) para lanzarlo contra los monstruos", 4);
+          this.hud.showHint(TOUCH ? "¡Agarraste un CRÁNEO!  Tocá 🔫 para lanzarlo: ¡salen FANTASMAS que atacan a los monstruos!" : "¡Agarraste un CRÁNEO!  Apretá F para lanzarlo: ¡salen FANTASMAS que atacan a los monstruos!", 4.5);
         }
         sk.destroy();
         this.skulls.splice(i, 1);
@@ -1024,6 +1029,60 @@ export class GameScene extends Container implements IScene {
     if (this.bossChip >= 1) {
       this.bossChip -= 1;
       this.damageBoss(boss);
+    }
+  }
+
+  // ------------------------------------------------------------------ fantasmas del cráneo
+
+  private spawnGhosts(x: number, y: number, dir: number): void {
+    Sfx.boo();
+    for (let i = 0; i < 3; i++) {
+      const g = new Ghost(x, y - 10, dir, i - 1);
+      this.ghosts.push(g);
+      this.entities.addChild(g);
+    }
+    this.fx.burst(x, y, { count: 16, colors: [0xffffff, 0xb3e5fc, 0xe1f5fe], speed: 260, life: 0.6, gravity: -120, size: 1.1 });
+    this.fx.floatText(x, y - 90, "¡BUUU!", "#e1f5fe", 40);
+  }
+
+  private updateGhosts(dt: number): void {
+    // cada fantasma va al monstruo más cercano (sin repetir objetivo si se puede)
+    const taken = new Set<Enemy>();
+    for (let i = this.ghosts.length - 1; i >= 0; i--) {
+      const g = this.ghosts[i];
+      let best: Enemy | null = null;
+      let bd = 1e9;
+      for (const e of this.enemies) {
+        if (e.dead || BULLET_PASS.has(e.label) || ARMORED.has(e.label) || taken.has(e)) continue;
+        const d = Math.hypot(e.x - g.x, e.y - 60 - g.y);
+        if (d < bd && d < 1100) {
+          bd = d;
+          best = e;
+        }
+      }
+      if (best) taken.add(best);
+      const hb = best ? best.getHitbox() : null;
+      let done = g.tick(dt, hb ? { x: hb.x + hb.width / 2, y: hb.y + hb.height / 2 } : null);
+      if (!done && this.state === "playing") {
+        const gb = g.getHitbox();
+        for (const e of this.enemies) {
+          if (e.dead || BULLET_PASS.has(e.label) || ARMORED.has(e.label) || !intersects(gb, e.getHitbox())) continue;
+          this.shootDown(e, "¡BUUU!");
+          g.charges--;
+          if (g.charges <= 0) {
+            done = true;
+            break;
+          }
+        }
+      }
+      if (Math.random() < 0.3) {
+        this.fx.burst(g.x, g.y + 20, { count: 1, colors: [0xffffff, 0xb3e5fc], speed: 40, life: 0.5, gravity: -60, size: 0.7 });
+      }
+      if (done) {
+        this.fx.burst(g.x, g.y, { count: 10, colors: [0xffffff, 0xe1f5fe], speed: 200, life: 0.5, gravity: -80 });
+        g.destroy();
+        this.ghosts.splice(i, 1);
+      }
     }
   }
 

@@ -8,7 +8,7 @@ import { buildWeaponArt } from "./art/WeaponArt";
 import { WORLD_ENEMIES } from "./game/worldEnemies";
 import { HEIGHT, WIDTH, getDifficulty } from "./config";
 import { AudioCtl } from "./core/AudioCtl";
-import { Music } from "./core/Music";
+import { Music, TRACKS, trackLength } from "./core/Music";
 import { Sfx } from "./core/Sfx";
 import { SceneManager } from "./core/SceneManager";
 import { TitleScene } from "./Scenas/TitleScene";
@@ -124,5 +124,5 @@ Keyboard.down.on("KeyM", () => AudioCtl.toggle());
 // Acceso para pruebas en local (no se incluye en el build de producción)
 declare const process: { env: { NODE_ENV?: string } };
 if (process.env.NODE_ENV !== "production") {
-  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES, Music, createPilot, GameScene, getCharacter, getDifficulty };
+  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES, Music, TRACKS, trackLength, createPilot, GameScene, getCharacter, getDifficulty };
 }

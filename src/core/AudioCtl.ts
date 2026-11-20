@@ -3,8 +3,8 @@ import { Music } from "./Music";
 import { Sfx } from "./Sfx";
 import { Storage } from "./Storage";
 
-/** Tema que usa la canción original (cancion.mp3) en vez de la música generada. */
-const SONG_TRACK = "world1";
+/** Tema que usaría la canción mp3 (ya no lo usa ninguna pantalla: el Mundo 1 tiene su tema largo generado). */
+const SONG_TRACK = "cancion";
 
 /**
  * Audio del juego: mute global persistido, música por pantalla y efectos.
