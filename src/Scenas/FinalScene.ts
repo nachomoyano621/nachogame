@@ -117,7 +117,7 @@ export class FinalScene extends Container implements IScene {
       const menu = new TextButton("☰  MENÚ (ESC)", () => this.menu(), { width: 380, color: 0x29b6f6 });
       menu.position.set(WIDTH / 2 + 535, 960);
       const at = stats.run?.lab ? "LABORATORIO" : `MUNDO ${stats.run?.world ?? 1}`;
-      const info = new Text(`FICHAS ${fichas} (continuar gasta 1)  ·  seguís en el ${at} con tu billetera (${stats.run?.wallet ?? 0} monedas) y tus puntos`, style({ fontSize: 28, fill: "#b9f6ca", strokeThickness: 5 }));
+      const info = new Text(`FICHAS ${fichas} (continuar gasta 1)  ·  seguís en el ${at} SIN ARMA · tus ${stats.run?.wallet ?? 0} monedas quedan para el próximo portal`, style({ fontSize: 28, fill: "#b9f6ca", strokeThickness: 5 }));
       info.anchor.set(0.5);
       info.position.set(WIDTH / 2, 1040);
       this.addChild(cont, retry, menu, info);

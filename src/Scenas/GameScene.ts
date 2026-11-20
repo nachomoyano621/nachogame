@@ -234,19 +234,17 @@ export class GameScene extends Container implements IScene {
     this.bg.setTheme(this.level - 1, 0.01);
     // se guarda con las fichas que quedan (por si cierra el juego en el medio)
     Storage.saveRun({ ...run });
-    // antes de seguir pasa por la ARMERÍA (el arma se perdió al caer, la billetera no)
+    // al continuar NO hay armería: se sigue sin arma (la billetera queda para el próximo portal)
+    this.player.makeInvulnerable(1.5);
     if (run.lab) {
       this.hud.setCoins(COINS_PER_WORLD, true);
       this.hud.setLevel(WORLDS + 1);
-      this.openShop("LABORATORIO", () => {
-        this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
-        this.startBoss(FINAL_BOSS);
-      });
+      this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
+      this.startBoss(FINAL_BOSS);
     } else {
       AudioCtl.music(`world${this.level}`);
-      this.openShop(`MUNDO ${this.level}`, () => {
-        this.hud.showBanner(`¡CONTINUAR! · MUNDO ${this.level}`, `${LEVEL_NAMES[this.level - 1]} · te quedan ${this.credits} fichas`, 2.6);
-      });
+      this.hud.showBanner(`¡CONTINUAR! · MUNDO ${this.level}`, `${LEVEL_NAMES[this.level - 1]} · te quedan ${this.credits} fichas`, 2.6);
+      this.hud.showHint("Seguís SIN ARMA · tus monedas quedan para la armería del próximo portal", 4);
     }
   }
 
