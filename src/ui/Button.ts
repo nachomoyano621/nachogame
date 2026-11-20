@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 import { Sfx } from "../core/Sfx";
 import { style } from "./styles";
+import { keyless } from "./touch";
 
 export interface ButtonOpts {
   width?: number;
@@ -23,7 +24,7 @@ export class TextButton extends Container {
     this.h = o.height ?? 92;
     this.color = o.color ?? 0xffb300;
     this.addChild(this.bg);
-    this.label = new Text(text, style({ fontSize: o.fontSize ?? 38, strokeThickness: 7 }));
+    this.label = new Text(keyless(text), style({ fontSize: o.fontSize ?? 38, strokeThickness: 7 }));
     this.label.anchor.set(0.5);
     this.addChild(this.label);
     this.draw(false);

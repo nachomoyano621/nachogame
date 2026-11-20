@@ -1,8 +1,9 @@
-import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 import { COINS_PER_WORLD, HEIGHT, MAX_LIVES, WIDTH, WORLDS } from "../config";
 import { AudioCtl } from "../core/AudioCtl";
 import { style } from "./styles";
+import { TOUCH } from "./touch";
 
 export interface PowerStatus {
   shield: number; // segundos restantes (0 = inactivo)
@@ -160,6 +161,12 @@ export class Hud extends Container {
     this.soundText = new Text("", style({ fontSize: 22, strokeThickness: 5 }));
     this.soundText.anchor.set(1, 0);
     this.soundText.position.set(WIDTH - 24, 64);
+    if (TOUCH) {
+      this.soundText.style.fontSize = 30;
+      this.soundText.interactive = true;
+      this.soundText.hitArea = new Rectangle(-200, -10, 210, 60);
+      this.soundText.on("pointertap", () => AudioCtl.toggle());
+    }
     this.addChild(this.soundText);
 
     this.slots = {
@@ -229,7 +236,7 @@ export class Hud extends Container {
     const pt = new Text("PAUSA", style({ fontSize: 140, fill: "#ffffff", strokeThickness: 12 }));
     pt.anchor.set(0.5);
     pt.position.set(WIDTH / 2, HEIGHT / 2 - 60);
-    const ps = new Text("P / ESC para seguir  ·  M sonido", style({ fontSize: 40 }));
+    const ps = new Text(TOUCH ? "Tocá II para seguir  ·  🔊 para el sonido" : "P / ESC para seguir  ·  M sonido", style({ fontSize: 40 }));
     ps.anchor.set(0.5);
     ps.position.set(WIDTH / 2, HEIGHT / 2 + 60);
     this.pauseLayer.addChild(dim, pt, ps);
@@ -301,7 +308,7 @@ export class Hud extends Container {
     if (tex) {
       this.gunIcon.scale.set(Math.min(80 / tex.width, 44 / tex.height));
     }
-    this.gunText.text = name ? `${name}  (F)` : "SIN ARMA";
+    this.gunText.text = name ? (TOUCH ? name : `${name}  (F)`) : "SIN ARMA";
     this.gunText.style.fill = name ? "#ffffff" : "#9e9e9e";
     this.gunText.x = tex ? 122 : 40;
     this.walletText.text = `BILLETERA ${wallet}`;
@@ -331,7 +338,7 @@ export class Hud extends Container {
   /** Poder especial: frac = 1 listo, 0 recién usado. */
   public setPower(name: string, frac: number): void {
     const ready = frac >= 1;
-    this.powerText.text = "E: " + name;
+    this.powerText.text = (TOUCH ? "" : "E: ") + name;
     this.powerText.style.fill = ready ? "#ffe57f" : "#9e9e9e";
     if (Math.abs(frac - this.powerFrac) > 0.004 || (ready && this.powerFrac < 1)) {
       this.powerFrac = frac;
@@ -429,7 +436,7 @@ export class Hud extends Container {
       this.powerRing.x = 0;
     }
     this.powerIcon.scale.set(this.powerFrac >= 1 ? 1 + Math.sin(this.t * 6) * 0.12 : 1);
-    this.soundText.text = `M: sonido ${AudioCtl.muted ? "OFF" : "ON"}  ·  P: pausa`;
+    this.soundText.text = TOUCH ? `${AudioCtl.muted ? "🔇" : "🔊"} SONIDO` : `M: sonido ${AudioCtl.muted ? "OFF" : "ON"}  ·  P: pausa`;
 
     for (const h of this.hearts) {
       if (h.scale.x > 1) {

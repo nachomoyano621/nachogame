@@ -8,6 +8,7 @@ import { GameStats } from "../game/types";
 import { Keyboard } from "../utils/Keyboard";
 import { TextButton } from "./Button";
 import { style } from "./styles";
+import { TOUCH } from "./touch";
 
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const SLOT_X = [-170, 0, 170];
@@ -129,7 +130,7 @@ export class RecordsOverlay extends Container {
       }
     });
 
-    const help = new Text("Escribí las letras (o ↑ ↓ para cambiar, ← → para moverte)", style({ fontSize: 26, strokeThickness: 5, fill: "#eceff1" }));
+    const help = new Text(TOUCH ? "Tocá ▲ ▼ para cambiar cada letra" : "Escribí las letras (o ↑ ↓ para cambiar, ← → para moverte)", style({ fontSize: 26, strokeThickness: 5, fill: "#eceff1" }));
     help.anchor.set(0.5);
     help.position.set(WIDTH / 2, 790);
     const ok = new TextButton("✔  GUARDAR (ENTER)", () => this.confirm(), { width: 520, color: 0x43a047 });
@@ -264,7 +265,7 @@ export class RecordsOverlay extends Container {
 
     const ok = new TextButton("✔  LISTO (ENTER)", () => this.close(), { width: 440, height: 80, fontSize: 34, color: diff.color });
     ok.position.set(WIDTH / 2, 915);
-    const note = new Text(this.o.switchable ? "← → cambiar dificultad  ·  los récords quedan guardados en este navegador" : "Los récords quedan guardados en este navegador", style({ fontSize: 20, strokeThickness: 4, fill: "#bdbdbd" }));
+    const note = new Text(this.o.switchable && !TOUCH ? "← → cambiar dificultad  ·  los récords quedan guardados en este navegador" : "Los récords quedan guardados en este navegador", style({ fontSize: 20, strokeThickness: 4, fill: "#bdbdbd" }));
     note.anchor.set(0.5);
     note.position.set(WIDTH / 2, 980);
     this.content.addChild(ok, note);

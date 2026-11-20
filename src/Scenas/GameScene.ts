@@ -33,6 +33,7 @@ import { Tutorial } from "../game/Tutorial";
 import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { TouchControls } from "../ui/TouchControls";
+import { TOUCH } from "../ui/touch";
 import { Keyboard } from "../utils/Keyboard";
 import { FinalScene } from "./FinalScene";
 import { WinScene } from "./WinScene";
@@ -194,6 +195,7 @@ export class GameScene extends Container implements IScene {
     Keyboard.down.on("key", this.onKeyDown, this);
     Keyboard.up.on("key", this.onKeyUp, this);
     window.addEventListener("blur", this.onBlur);
+    window.addEventListener("resize", this.onResize);
     this.offAch = Achievements.onUnlock((a) => {
       this.hud.showAchievement(a.icon, a.name);
       Sfx.levelUp();
@@ -325,6 +327,13 @@ export class GameScene extends Container implements IScene {
     }
   };
 
+  /** En el celular: si lo pone vertical (aparece "girá el celular"), se pausa. */
+  private readonly onResize = (): void => {
+    if (TOUCH && window.innerHeight > window.innerWidth && this.state === "playing") {
+      this.togglePause();
+    }
+  };
+
   private togglePause(): void {
     if (this.state === "playing") {
       this.state = "paused";
@@ -342,6 +351,7 @@ export class GameScene extends Container implements IScene {
     Keyboard.down.off("key", this.onKeyDown, this);
     Keyboard.up.off("key", this.onKeyUp, this);
     window.removeEventListener("blur", this.onBlur);
+    window.removeEventListener("resize", this.onResize);
     this.offAch();
     // la música la elige la pantalla siguiente (no se corta acá para no pisarla)
   }

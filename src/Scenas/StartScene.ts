@@ -11,6 +11,7 @@ import { RecordsOverlay } from "../ui/RecordsOverlay";
 import { AchievementsOverlay } from "../ui/AchievementsOverlay";
 import { ACHIEVEMENTS, Achievements } from "../core/Achievements";
 import { style } from "../ui/styles";
+import { TOUCH } from "../ui/touch";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
 
@@ -84,7 +85,7 @@ class CharacterCard extends Container {
       this.addChild(pips);
     });
 
-    const pw = new Text("⚡ E: " + def.power.name, style({ fontSize: 21, fill: "#ffe57f", strokeThickness: 4 }));
+    const pw = new Text((TOUCH ? "⚡ " : "⚡ E: ") + def.power.name, style({ fontSize: 21, fill: "#ffe57f", strokeThickness: 4 }));
     pw.anchor.set(0.5);
     pw.y = 232;
     this.addChild(pw);
@@ -208,7 +209,7 @@ export class StartScene extends Container implements IScene {
     });
 
     // selector de dificultad
-    const diffLabel = new Text("DIFICULTAD (↑ ↓)", style({ fontSize: 24, strokeThickness: 5 }));
+    const diffLabel = new Text(TOUCH ? "DIFICULTAD" : "DIFICULTAD (↑ ↓)", style({ fontSize: 24, strokeThickness: 5 }));
     diffLabel.anchor.set(1, 0.5);
     diffLabel.position.set(WIDTH / 2 - 400, 858);
     this.addChild(diffLabel);
@@ -234,7 +235,9 @@ export class StartScene extends Container implements IScene {
     this.addChild(play);
 
     const help = new Text(
-      "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F disparar / cráneo  ·  E poder  ·  T récords  ·  L logros  ·  P pausa  ·  M sonido",
+      TOUCH
+        ? "Tocá un personaje para elegirlo  ·  tocalo de nuevo o JUGAR para empezar  ·  Jugá con el celular acostado"
+        : "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F disparar / cráneo  ·  E poder  ·  T récords  ·  L logros  ·  P pausa  ·  M sonido",
       style({ fontSize: 22, strokeThickness: 4 }),
     );
     help.anchor.set(0.5);

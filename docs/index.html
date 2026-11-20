@@ -31,12 +31,45 @@
 		#pixi-canvas {
 			display: block;
 		}
+
+		#rotate {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: #0b0b0b;
+			color: #fff;
+			font-family: "Arial Black", Arial, sans-serif;
+			text-align: center;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 18px;
+			font-size: 26px;
+			z-index: 10;
+		}
+
+		#rotate .phone {
+			font-size: 72px;
+			animation: girar 1.6s ease-in-out infinite;
+		}
+
+		@keyframes girar {
+			0%, 30% { transform: rotate(0deg); }
+			60%, 100% { transform: rotate(-90deg); }
+		}
+
+		@media (orientation: portrait) and (pointer: coarse) {
+			#rotate {
+				display: flex;
+			}
+		}
 	</style>
-<script defer src="bundle.js?7e776cf5ee27e403aad6"></script></head>
+<script defer src="bundle.js?095454ad578d8d16d616"></script></head>
 
 <body>
 	<noscript>Activá JavaScript en tu navegador para jugar.</noscript>
 	<div id="pixi-content"><canvas id="pixi-canvas"></canvas></div>
+	<div id="rotate"><div class="phone">📱</div><div>Girá el celular</div><div style="font-size:18px;color:#ff8a80">Tomi Game se juega acostado</div></div>
 </body>
 
 </html>

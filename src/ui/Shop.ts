@@ -5,6 +5,7 @@ import { WEAPONS, WeaponDef, WeaponId } from "../game/weapons";
 import { Keyboard } from "../utils/Keyboard";
 import { TextButton } from "./Button";
 import { style } from "./styles";
+import { TOUCH } from "./touch";
 
 const CARD_W = 310;
 const CARD_H = 430;
@@ -73,7 +74,7 @@ class WeaponCard extends Container {
     g.endFill();
     this.alpha = canBuy || equipped ? 1 : 0.55;
     this.priceText.style.fill = canBuy ? "#ffeb3b" : "#ff5252";
-    this.status.text = equipped ? "✓ EQUIPADA" : canBuy ? (selected ? "ENTER: COMPRAR" : "") : "TE FALTAN MONEDAS";
+    this.status.text = equipped ? "✓ EQUIPADA" : canBuy ? (TOUCH ? "TOCÁ PARA COMPRAR" : selected ? "ENTER: COMPRAR" : "") : "TE FALTAN MONEDAS";
     this.status.style.fill = equipped ? "#69f0ae" : canBuy ? "#ffffff" : "#ff8a80";
     this.scale.set(selected ? 1.05 : 1);
   }
@@ -144,7 +145,7 @@ export class Shop extends Container {
     this.cont.position.set(WIDTH / 2, 905);
     this.addChild(this.cont);
 
-    const help = new Text("← → elegir  ·  ENTER comprar  ·  ESC seguir  ·  Si perdés una vida, perdés el arma. Las monedas que no gastes se guardan.", style({ fontSize: 22, strokeThickness: 4 }));
+    const help = new Text((TOUCH ? "Tocá un arma para comprarla  ·  " : "← → elegir  ·  ENTER comprar  ·  ESC seguir  ·  ") + "Si perdés una vida, perdés el arma. Las monedas que no gastes se guardan.", style({ fontSize: 22, strokeThickness: 4 }));
     help.anchor.set(0.5);
     help.position.set(WIDTH / 2, 1010);
     this.addChild(help);

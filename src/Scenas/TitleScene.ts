@@ -11,6 +11,7 @@ import { CHARACTERS, getCharacter } from "../game/characters";
 import { START_CREDITS } from "../game/types";
 import { Effects } from "../game/Effects";
 import { style } from "../ui/styles";
+import { TOUCH } from "../ui/touch";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
 import { StartScene } from "./StartScene";
@@ -140,7 +141,7 @@ export class TitleScene extends Container implements IScene {
     boss.position.set(WIDTH / 2, 625);
     this.addChild(boss);
 
-    this.press = new Text("PRESIONÁ  ENTER  PARA  EMPEZAR", style({ fontSize: 58, fill: ["#ffffff", "#ffcdd2"], stroke: "#b71c1c", strokeThickness: 10 }));
+    this.press = new Text(TOUCH ? "TOCÁ  LA  PANTALLA  PARA  EMPEZAR" : "PRESIONÁ  ENTER  PARA  EMPEZAR", style({ fontSize: 58, fill: ["#ffffff", "#ffcdd2"], stroke: "#b71c1c", strokeThickness: 10 }));
     this.press.anchor.set(0.5);
     this.press.position.set(WIDTH / 2, 730);
     this.addChild(this.press);
@@ -150,7 +151,7 @@ export class TitleScene extends Container implements IScene {
     if (run && run.credits > 0) {
       const fichas = "●".repeat(run.credits) + "○".repeat(Math.max(0, START_CREDITS - run.credits));
       const where = run.lab ? "LABORATORIO" : `MUNDO ${run.world}`;
-      const cont = new Text(`C: CONTINUAR  ·  ${where}  ·  FICHAS ${fichas}`, style({ fontSize: 36, fill: "#b9f6ca", strokeThickness: 7 }));
+      const cont = new Text(`${TOUCH ? "▶ TOCÁ ACÁ PARA CONTINUAR" : "C: CONTINUAR"}  ·  ${where}  ·  FICHAS ${fichas}`, style({ fontSize: 36, fill: "#b9f6ca", strokeThickness: 7 }));
       cont.anchor.set(0.5);
       cont.position.set(WIDTH / 2, 795);
       cont.interactive = true;

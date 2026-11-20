@@ -34,6 +34,18 @@ function resize(): void {
   const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT);
   const w = Math.round(WIDTH * scale);
   const h = Math.round(HEIGHT * scale);
+  // Dibujar a la resolución que realmente se ve (antes un celular con densidad 3 dibujaba 5760x3240 por cuadro)
+  const dpr = window.devicePixelRatio || 1;
+  const res = Math.max(0.5, Math.min(dpr, (w * dpr) / WIDTH));
+  if (Math.abs(app.renderer.resolution - res) > 0.01) {
+    app.renderer.resolution = res;
+    app.renderer.resize(WIDTH, HEIGHT);
+    // los toques se traducen con esta resolución: hay que avisarle también
+    const im = app.renderer.plugins.interaction as { resolution: number } | undefined;
+    if (im) {
+      im.resolution = res;
+    }
+  }
   app.view.style.width = `${w}px`;
   app.view.style.height = `${h}px`;
   app.view.style.marginLeft = `${Math.floor((window.innerWidth - w) / 2)}px`;
@@ -87,6 +99,24 @@ const unlockAudio = (): void => {
 };
 window.addEventListener("keydown", unlockAudio);
 window.addEventListener("pointerdown", unlockAudio);
+
+// En celulares: pantalla completa y horizontal al primer toque (donde el navegador lo permite)
+if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+  const goFull = (): void => {
+    window.removeEventListener("pointerup", goFull);
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    try {
+      const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: "hide" }) : (el.webkitRequestFullscreen?.(), undefined);
+      void Promise.resolve(p)
+        .then(() => (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock?.("landscape"))
+        .catch(() => undefined);
+    } catch {
+      // sin pantalla completa (ej: iPhone): se juega igual
+    }
+    setTimeout(resize, 300);
+  };
+  window.addEventListener("pointerup", goFull);
+}
 
 // Mute global con M en cualquier pantalla
 Keyboard.down.on("KeyM", () => AudioCtl.toggle());
