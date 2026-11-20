@@ -1,7 +1,7 @@
 import { AnimatedSprite, Container, Graphics, Rectangle, Text, Texture, filters } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 import { WArt } from "../art/WorldArt";
-import { GROUND_Y, WIDTH, rand } from "../config";
+import { BossTuning, GROUND_Y, WIDTH, rand } from "../config";
 import { Sfx } from "../core/Sfx";
 import { style } from "../ui/styles";
 import { Enemy, EnemyCtx } from "./enemies";
@@ -169,6 +169,8 @@ export class Boss extends Container {
   public done = false;
   /** Cuánto se agacha al quedar mareado (fracción de su alto). */
   private static readonly SAG = 0.3;
+  /** Alto máximo del jefe embistiendo (medido: los jefes de ~400 px eran imposibles de saltar). */
+  private static readonly CHARGE_H = 260;
   public readonly cfg: BossConfig;
 
   private state: BossState = "enter";
@@ -181,6 +183,7 @@ export class Boss extends Container {
   private flashT = 0;
   private facing: -1 | 1 = -1;
   private readonly speed: number;
+  private readonly tune: BossTuning;
   private readonly S: number;
   private readonly dw: number;
   private readonly dh: number;
@@ -194,12 +197,13 @@ export class Boss extends Container {
   private readonly stars = new Container();
   private readonly hurtFilter = new filters.ColorMatrixFilter();
 
-  constructor(cfg: BossConfig, maxHp: number, speed: number) {
+  constructor(cfg: BossConfig, maxHp: number, tune: BossTuning) {
     super();
     this.cfg = cfg;
     this.maxHp = maxHp;
     this.hp = maxHp;
-    this.speed = speed;
+    this.tune = tune;
+    this.speed = tune.speed;
     this.S = cfg.scale;
 
     const frames = cfg.frames();
@@ -298,7 +302,7 @@ export class Boss extends Container {
   }
 
   public get enraged(): boolean {
-    return this.hp <= this.maxHp / 2;
+    return this.tune.enrage && this.hp <= this.maxHp / 2;
   }
 
   /** Estado actual (para la demo / debug). */
@@ -328,7 +332,16 @@ export class Boss extends Container {
   }
 
   public bodyBox(): Rectangle {
+    if (this.charging) {
+      // embistiendo va con la cabeza gacha: siempre se lo puede saltar con doble salto
+      const h = Math.min(this.dh * 0.8, Boss.CHARGE_H);
+      return new Rectangle(this.x - this.dw * 0.42, this.y - h - this.dh * 0.02, this.dw * 0.84, h);
+    }
     return new Rectangle(this.x - this.dw * 0.42, this.y - this.dh * 0.82, this.dw * 0.84, this.dh * 0.8);
+  }
+
+  private get charging(): boolean {
+    return this.state === "charge" || this.state === "chargeWarn";
   }
 
   public hit(): void {
@@ -356,7 +369,7 @@ export class Boss extends Container {
 
   private idle(seconds: number): void {
     this.state = "idle";
-    this.timer = seconds / this.spd;
+    this.timer = (seconds * this.tune.rest) / this.spd;
     this.body.rotation = 0;
   }
 
@@ -378,7 +391,7 @@ export class Boss extends Container {
     if (a === "babies") {
       this.state = "summon";
       this.timer = 0.7;
-      this.spitLeft = this.enraged ? 3 : 2;
+      this.spitLeft = this.tune.babies[this.enraged ? 1 : 0];
       Sfx.bossVoice(this.cfg.voice);
       this.emit("summon");
     } else if (a === "spit") {
@@ -386,7 +399,7 @@ export class Boss extends Container {
       this.timer = 0.6;
     } else if (a === "charge") {
       this.state = "chargeWarn";
-      this.timer = 0.9 / this.spd;
+      this.timer = (0.9 * this.tune.warn) / this.spd;
       Sfx.bossVoice(this.cfg.voice);
     } else {
       this.state = "jump";
@@ -419,6 +432,11 @@ export class Boss extends Container {
       this.body.filters = null;
     }
     this.eye.alpha = Math.sin(this.t * (this.enraged ? 16 : 6)) > 0 ? 1 : 0.3;
+    // alto visual: agachado al embestir, aplastado al estar mareado
+    if (this.state !== "dying") {
+      const crouch = this.charging ? Math.min(1, (Boss.CHARGE_H + 40) / this.dh) : this.state === "stunned" ? 1 - Boss.SAG : 1;
+      this.body.scale.y += (this.S * crouch - this.body.scale.y) * Math.min(1, dt * 12);
+    }
 
     switch (this.state) {
       case "enter":
@@ -439,7 +457,7 @@ export class Boss extends Container {
         this.body.rotation = Math.min(0.12, this.body.rotation + dt * 0.4);
         if (this.timer <= 0) {
           this.state = "spit";
-          this.spitLeft = this.enraged ? 5 : 3;
+          this.spitLeft = this.tune.shots[this.enraged ? 1 : 0];
           this.timer = 0;
         }
         break;
@@ -473,7 +491,8 @@ export class Boss extends Container {
         if (this.timer <= 0) {
           this.body.x = 0;
           this.state = "charge";
-          this.vx = -980 * this.spd;
+          // la embestida va siempre rápida: lenta era MÁS difícil de saltar (tardaba más en pasar por debajo)
+          this.vx = -980 * Math.max(1, this.tune.speed) * (this.enraged ? 1.15 : 1);
         }
         break;
       case "charge":
@@ -485,7 +504,7 @@ export class Boss extends Container {
         if (this.x <= this.leftX) {
           this.x = this.leftX;
           this.state = "stunned";
-          this.timer = (this.enraged ? 2.2 : 2.8) / Math.max(1, this.speed);
+          this.timer = this.tune.stun * (this.enraged ? 0.85 : 1);
           this.body.rotation = -0.1;
           this.body.y = 0;
           this.stars.visible = true;
@@ -498,7 +517,6 @@ export class Boss extends Container {
       case "stunned": {
         this.body.rotation = -0.1 + Math.sin(this.t * 5) * 0.03;
         // agachado y aplastado mientras está mareado
-        this.body.scale.y += (this.S * (1 - Boss.SAG) - this.body.scale.y) * Math.min(1, dt * 12);
         this.stars.position.set(-this.dw * 0.25, -this.dh * (1 - Boss.SAG) - 10);
         this.stars.children.forEach((st, i) => {
           const a = this.t * 4 + (i * Math.PI * 2) / 3;
@@ -537,10 +555,11 @@ export class Boss extends Container {
           Sfx.boom();
           ctx.shake(22, 0.5);
           ctx.burst(this.x, GROUND_Y - 10, { count: 30, colors: [this.cfg.color, 0xa1887f, 0xffffff], speed: 600, life: 0.6, gravity: 1200, up: 300 });
-          const v = 640 * this.spd;
+          // las ondas también: lentas costaban más de saltar
+          const v = 640 * Math.max(1, this.tune.speed) * this.tune.wave;
           ctx.spawn(new Shockwave(this.x - this.dw * 0.4, -v, this.cfg.color));
           ctx.spawn(new Shockwave(this.x + this.dw * 0.4, v, this.cfg.color));
-          if (this.enraged) {
+          if (this.enraged && this.tune.extraWave) {
             ctx.spawn(new Shockwave(this.x - this.dw * 0.4, -v * 0.62, this.cfg.color));
           }
           this.idle(1);
@@ -576,7 +595,7 @@ export class Boss extends Container {
     const y0 = this.y - this.dh * 0.72;
     const T = rand(0.9, 1.15);
     const g = 1400;
-    const tx = ctx.px + rand(-120, 120);
+    const tx = ctx.px + rand(-this.tune.aim, this.tune.aim);
     const ty = ctx.py - 60;
     const vx = (tx - x0) / T;
     const vy = (ty - y0) / T - 0.5 * g * T;

@@ -1024,7 +1024,7 @@ export class GameScene extends Container implements IScene {
       this.fx.floatText(x, y - 40, "¡TOC!", "#ffffff", 28);
       return;
     }
-    this.bossChip += dmg;
+    this.bossChip += dmg * this.diff.boss.dmg;
     this.fx.burst(x, y, { count: 6, colors: [0xffffff, boss.cfg.color], speed: 260, life: 0.3 });
     if (this.bossChip >= 1) {
       this.bossChip -= 1;
@@ -1368,7 +1368,7 @@ export class GameScene extends Container implements IScene {
   /** Aparece un jefe (el del mundo o el DINO-X final): los demás monstruos se van y queda sólo él. */
   private startBoss(cfg: BossConfig): void {
     const hp = Math.max(2, Math.round(this.diff.bossHp * cfg.hpMul));
-    this.boss = new Boss(cfg, hp, this.diff.speed);
+    this.boss = new Boss(cfg, hp, this.diff.boss);
     this.bossChip = 0;
     this.boss.on("stunned", () => this.hud.showHint("¡ESTÁ MAREADO!  ¡SALTALE EN LA CABEZA!", 2.2));
     this.entities.addChildAt(this.boss, 0);
