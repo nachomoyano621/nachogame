@@ -19,6 +19,8 @@ export class Player extends Container {
   public dead = false;
   /** true mientras planea (personajes con glide). */
   public gliding = false;
+  /** Multiplicador de velocidad (turbo del astronauta). */
+  public speedMul = 1;
 
   private jumpsLeft: number;
   private coyote = 0;
@@ -160,7 +162,7 @@ export class Player extends Container {
 
     // --- horizontal
     const dir = (Keyboard.isDown(...RIGHT_KEYS) ? 1 : 0) - (Keyboard.isDown(...LEFT_KEYS) ? 1 : 0);
-    const target = dir * this.def.speed;
+    const target = dir * this.def.speed * this.speedMul;
     this.vx += (target - this.vx) * Math.min(1, dt * (this.onGround ? 18 : 9));
     if (dir !== 0) {
       this.facing = dir;

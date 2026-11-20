@@ -16,6 +16,7 @@ export class TouchControls extends Container {
     this.addButton(WIDTH - 160, HEIGHT - 170, 115, "▲", "Space");
     this.addButton(WIDTH - 400, HEIGHT - 120, 75, "▼", "ArrowDown");
     this.addButton(WIDTH - 360, HEIGHT - 300, 70, "🔫", "KeyF");
+    this.addButton(WIDTH - 560, HEIGHT - 230, 70, "⚡", "KeyE");
     this.addButton(WIDTH - 70, 260, 50, "II", "KeyP");
   }
 

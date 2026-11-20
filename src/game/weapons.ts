@@ -31,6 +31,10 @@ export interface WeaponDef {
   /** Punto de la empuñadura dentro del dibujo (anchor). */
   anchor: [number, number];
   bullet: () => Texture;
+  /** Gira mientras vuela (estrellas ninja). */
+  spin?: number;
+  /** Cae y rebota en el piso (pelota). */
+  bounce?: boolean;
 }
 
 export const WEAPONS: WeaponDef[] = [
@@ -61,6 +65,18 @@ export const WEAPONS: WeaponDef[] = [
   },
 ];
 
+/** Proyectiles de los poderes especiales (no se venden). */
+export const SHURIKEN: WeaponDef = {
+  id: "pistol", name: "ESTRELLA", price: 0, desc: "",
+  cooldown: 0, speed: 1400, bossDmg: 0.25, pellets: 1, spread: 0, pierce: 2, explosive: false, life: 0.8,
+  stats: { poder: 0, cadencia: 0 }, tex: () => WpArt.shuriken, anchor: [0.5, 0.5], bullet: () => WpArt.shuriken, spin: 18,
+};
+export const BALL: WeaponDef = {
+  id: "pistol", name: "PELOTA", price: 0, desc: "",
+  cooldown: 0, speed: 1050, bossDmg: 0.5, pellets: 1, spread: 0, pierce: 4, explosive: false, life: 1.8,
+  stats: { poder: 0, cadencia: 0 }, tex: () => WpArt.ball, anchor: [0.5, 0.5], bullet: () => WpArt.ball, spin: 10, bounce: true,
+};
+
 export function getWeapon(id: WeaponId): WeaponDef {
   return WEAPONS.find((w) => w.id === id) ?? WEAPONS[0];
 }
@@ -72,7 +88,7 @@ export class Bullet extends Sprite {
   /** Enemigos ya atravesados (para no pegarles dos veces). */
   public readonly hit = new Set<unknown>();
   private readonly vx: number;
-  private readonly vy: number;
+  private vy: number;
   private life: number;
 
   constructor(def: WeaponDef, x: number, y: number, dir: number, angle: number) {
@@ -90,7 +106,17 @@ export class Bullet extends Sprite {
   /** Devuelve true cuando se terminó (alcance, salió de la pantalla o tocó el piso). */
   public tick(dt: number): boolean {
     this.x += this.vx * dt;
+    if (this.def.bounce) {
+      this.vy += 2200 * dt;
+      if (this.y + this.vy * dt > GROUND_Y - 22) {
+        this.y = GROUND_Y - 22;
+        this.vy = -Math.max(520, Math.abs(this.vy) * 0.75);
+      }
+    }
     this.y += this.vy * dt;
+    if (this.def.spin) {
+      this.rotation += this.def.spin * dt * Math.sign(this.vx || 1);
+    }
     this.life -= dt;
     return this.life <= 0 || this.x < -60 || this.x > WIDTH + 60 || this.y > GROUND_Y;
   }

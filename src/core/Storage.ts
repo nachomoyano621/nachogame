@@ -29,9 +29,13 @@ interface SaveData {
   lastName: string;
   /** Personajes desbloqueados. */
   unlocked: string[];
+  /** Logros conseguidos. */
+  achievements: string[];
+  /** Contadores acumulados para los logros (monstruos aplastados, cráneos, etc.). */
+  counters: Record<string, number>;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [] };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {} };
 
 function read(): SaveData {
   try {
@@ -109,6 +113,21 @@ export const Storage = {
     }
     write({ unlocked: [...list, id] });
     return true;
+  },
+  get achievements(): string[] {
+    return read().achievements;
+  },
+  setAchievements(list: string[]): void {
+    write({ achievements: list });
+  },
+  counter(key: string): number {
+    return read().counters[key] ?? 0;
+  },
+  addCounter(key: string, n: number): number {
+    const counters = read().counters;
+    const v = (counters[key] ?? 0) + n;
+    write({ counters: { ...counters, [key]: v } });
+    return v;
   },
   get character(): string {
     return read().character;

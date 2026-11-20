@@ -10,6 +10,8 @@ export interface WeaponArtBank {
   bullet: Texture;
   pellet: Texture;
   rocket: Texture;
+  shuriken: Texture;
+  ball: Texture;
 }
 
 export const WpArt = {} as WeaponArtBank;
@@ -139,6 +141,40 @@ function drawRocket(g: Graphics): void {
   g.lineStyle(0);
 }
 
+function drawShuriken(g: Graphics): void {
+  g.lineStyle(2, 0x263238);
+  g.beginFill(0xcfd8dc);
+  const pts: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const r = i % 2 === 0 ? 20 : 7;
+    pts.push(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  g.drawPolygon(pts);
+  g.endFill();
+  g.lineStyle(0);
+  g.beginFill(0x37474f);
+  g.drawCircle(0, 0, 4);
+  g.endFill();
+}
+
+/** Pelota de fútbol con gajos rojinegros. */
+function drawBall(g: Graphics): void {
+  g.lineStyle(3, 0x111111);
+  g.beginFill(0xffffff);
+  g.drawCircle(0, 0, 20);
+  g.endFill();
+  g.lineStyle(0);
+  g.beginFill(0xd50000);
+  g.drawPolygon([0, -8, 7.6, -2.5, 4.7, 6.5, -4.7, 6.5, -7.6, -2.5]);
+  g.endFill();
+  g.beginFill(0x111111);
+  for (const a of [-Math.PI / 2, -Math.PI / 2 + 1.257, -Math.PI / 2 + 2.513, -Math.PI / 2 + 3.77, -Math.PI / 2 + 5.027]) {
+    g.drawCircle(Math.cos(a + 0.63) * 16, Math.sin(a + 0.63) * 16, 4);
+  }
+  g.endFill();
+}
+
 export function buildWeaponArt(r: AbstractRenderer): void {
   const bake = (draw: (g: Graphics) => void, region: Rectangle): Texture => {
     const g = new Graphics();
@@ -155,4 +191,6 @@ export function buildWeaponArt(r: AbstractRenderer): void {
   WpArt.bullet = bake(drawBullet, new Rectangle(-24, -7, 36, 14));
   WpArt.pellet = bake(drawPellet, new Rectangle(-9, -9, 18, 18));
   WpArt.rocket = bake(drawRocket, new Rectangle(-30, -14, 56, 28));
+  WpArt.shuriken = bake(drawShuriken, new Rectangle(-22, -22, 44, 44));
+  WpArt.ball = bake(drawBall, new Rectangle(-23, -23, 46, 46));
 }

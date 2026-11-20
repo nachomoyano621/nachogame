@@ -8,6 +8,8 @@ import { Storage } from "../core/Storage";
 import { CHARACTERS, CharacterDef, scaleFor } from "../game/characters";
 import { TextButton } from "../ui/Button";
 import { RecordsOverlay } from "../ui/RecordsOverlay";
+import { AchievementsOverlay } from "../ui/AchievementsOverlay";
+import { ACHIEVEMENTS, Achievements } from "../core/Achievements";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
@@ -82,6 +84,11 @@ class CharacterCard extends Container {
       this.addChild(pips);
     });
 
+    const pw = new Text("⚡ E: " + def.power.name, style({ fontSize: 21, fill: "#ffe57f", strokeThickness: 4 }));
+    pw.anchor.set(0.5);
+    pw.y = 232;
+    this.addChild(pw);
+
     this.interactive = true;
     this.cursor = "pointer";
     this.draw();
@@ -143,7 +150,8 @@ export class StartScene extends Container implements IScene {
   private readonly worldName: Text;
   private worldIdx = 0;
   private worldT = 0;
-  private records: RecordsOverlay | null = null;
+  /** Tabla de récords o de logros abierta encima del menú. */
+  private overlay: (Container & { update(dt: number): void }) | null = null;
 
   constructor() {
     super();
@@ -187,6 +195,9 @@ export class StartScene extends Container implements IScene {
     const top = new TextButton("🏆 TOP 5 (T)", () => this.openRecords(), { width: 270, height: 60, fontSize: 26, color: 0xd32f2f });
     top.position.set(WIDTH - 165, 112);
     this.addChild(top);
+    const ach = new TextButton(`🏅 LOGROS ${Achievements.count}/${ACHIEVEMENTS.length} (L)`, () => this.openAchievements(), { width: 330, height: 60, fontSize: 24, color: 0xf9a825 });
+    ach.position.set(WIDTH - 195, 190);
+    this.addChild(ach);
 
     CHARACTERS.forEach((def, i) => {
       const card = new CharacterCard(def);
@@ -223,7 +234,7 @@ export class StartScene extends Container implements IScene {
     this.addChild(play);
 
     const help = new Text(
-      "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F disparar / lanzar cráneo  ·  T récords  ·  P pausa  ·  M sonido",
+      "← → moverse  ·  ↑ / ESPACIO saltar (¡también en el aire!)  ·  ↓ caer rápido  ·  F disparar / cráneo  ·  E poder  ·  T récords  ·  L logros  ·  P pausa  ·  M sonido",
       style({ fontSize: 22, strokeThickness: 4 }),
     );
     help.anchor.set(0.5);
@@ -238,32 +249,40 @@ export class StartScene extends Container implements IScene {
     Keyboard.down.on("key", this.onKey, this);
   }
 
+  private closeOverlay(): void {
+    const o = this.overlay;
+    if (o) {
+      this.removeChild(o);
+      o.destroy({ children: true });
+    }
+    // se suelta un ratito después: el ENTER que cerró la tabla no arranca la partida
+    setTimeout(() => (this.overlay = null), 250);
+  }
+
   private openRecords(): void {
-    if (this.records) {
+    if (this.overlay) {
       return;
     }
-    this.records = new RecordsOverlay({
-      difficulty: DIFFICULTIES[this.diffIdx].id,
-      switchable: true,
-      onClose: () => {
-        const o = this.records;
-        if (o) {
-          this.removeChild(o);
-          o.destroy({ children: true });
-        }
-        // se suelta en el próximo cuadro: el ENTER que cerró la tabla no arranca la partida
-        setTimeout(() => (this.records = null), 250);
-      },
-    });
-    this.addChild(this.records);
+    this.overlay = new RecordsOverlay({ difficulty: DIFFICULTIES[this.diffIdx].id, switchable: true, onClose: () => this.closeOverlay() });
+    this.addChild(this.overlay);
+  }
+
+  private openAchievements(): void {
+    if (this.overlay) {
+      return;
+    }
+    this.overlay = new AchievementsOverlay(() => this.closeOverlay());
+    this.addChild(this.overlay);
   }
 
   private onKey(code: string): void {
-    if (this.records) {
+    if (this.overlay) {
       return;
     }
     if (code === "KeyT") {
       this.openRecords();
+    } else if (code === "KeyL") {
+      this.openAchievements();
     } else if (code === "ArrowLeft" || code === "KeyA") {
       this.select(this.selected - 1);
     } else if (code === "ArrowRight" || code === "KeyD") {
@@ -338,8 +357,8 @@ export class StartScene extends Container implements IScene {
   public update(dtMS: number): void {
     const dt = dtMS / 1000;
     this.t += dt;
-    if (this.records && !this.records.destroyed) {
-      this.records.update(dt);
+    if (this.overlay && !this.overlay.destroyed) {
+      this.overlay.update(dt);
     }
     this.bg.update(dt, 240);
     this.worldT += dt;

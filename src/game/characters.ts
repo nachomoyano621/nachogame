@@ -3,6 +3,15 @@ import { Art } from "../art/ProceduralArt";
 
 export type CharacterId = "vikingo" | "ninja" | "robot" | "astro" | "rojinegro";
 
+export type PowerId = "grito" | "estrellas" | "escudo" | "turbo" | "pelotazo";
+
+export interface SpecialPower {
+  id: PowerId;
+  name: string;
+  /** Segundos de recarga. */
+  cooldown: number;
+}
+
 export interface CharacterDef {
   id: CharacterId;
   name: string;
@@ -25,6 +34,8 @@ export interface CharacterDef {
   accent: number;
   stats: { velocidad: number; salto: number; vidas: number };
   frames: () => Texture[];
+  /** Poder especial (tecla E). */
+  power: SpecialPower;
   /** Si está, hay que desbloquearlo: texto de cómo hacerlo. */
   unlock?: string;
 }
@@ -33,6 +44,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "vikingo",
     name: "TOMI EL VIKINGO",
+    power: { id: "grito", name: "GRITO VIKINGO", cooldown: 12 },
     desc: "El clásico. Equilibrado, doble salto y 3 vidas.",
     speed: 420,
     jump: 1050,
@@ -49,6 +61,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "ninja",
     name: "NACHO NINJA",
+    power: { id: "estrellas", name: "ESTRELLAS NINJA", cooldown: 3.5 },
     desc: "Rapidísimo y con TRIPLE salto. Pero sólo 2 vidas.",
     speed: 540,
     jump: 1000,
@@ -65,6 +78,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "robot",
     name: "ROBO-TOMI",
+    power: { id: "escudo", name: "ESCUDO RÁPIDO", cooldown: 16 },
     desc: "Lento pero blindado: 4 vidas y arranca con escudo.",
     speed: 350,
     jump: 980,
@@ -81,6 +95,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "astro",
     name: "CAPITÁN ASTRO",
+    power: { id: "turbo", name: "TURBO", cooldown: 12 },
     desc: "Mantené el salto en el aire para PLANEAR con su mochila cohete.",
     speed: 420,
     jump: 1040,
@@ -98,6 +113,7 @@ export const CHARACTERS: CharacterDef[] = [
   {
     id: "rojinegro",
     name: "TOMI ROJINEGRO",
+    power: { id: "pelotazo", name: "PELOTAZO", cooldown: 5 },
     desc: "El premio por vencer al DINO-X: rápido, salta alto y tiene 4 vidas.",
     speed: 480,
     jump: 1090,

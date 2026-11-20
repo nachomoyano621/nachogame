@@ -16,9 +16,10 @@ import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { newRunId } from "../core/Records";
+import { Achievements } from "../core/Achievements";
 import { Background, LEVEL_NAMES } from "../game/Background";
 import { AcidBall, Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
-import { Bullet, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
+import { BALL, Bullet, SHURIKEN, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
 import { Shop } from "../ui/Shop";
 import { CharacterDef, getCharacter } from "../game/characters";
 import { Effects } from "../game/Effects";
@@ -41,6 +42,10 @@ type State = "playing" | "paused" | "shop" | "dying" | "won" | "done";
 const BOSS_BOUNTY = 20;
 /** Radio de la explosión de la bazooka. */
 const BLAST_R = 170;
+/** Teclas del poder especial. */
+const POWER_KEYS = ["KeyE", "KeyK"];
+/** Radio del GRITO VIKINGO. */
+const SHOUT_R = 520;
 
 const MAGNET_TIME = 6;
 const X2_TIME = 9;
@@ -140,6 +145,13 @@ export class GameScene extends Container implements IScene {
   private gunHintShown = false;
   /** Identifica la partida (un solo récord aunque continúe). */
   private runId = newRunId();
+  /** Vidas perdidas en la partida (para el logro INTOCABLE). */
+  private livesLost = 0;
+  /** Recarga del poder especial (0 = listo). */
+  private powerCd = 0;
+  /** Segundos de TURBO que quedan (astronauta). */
+  private turboT = 0;
+  private readonly offAch: () => void;
 
   constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState) {
     super();
@@ -176,6 +188,10 @@ export class GameScene extends Container implements IScene {
     Keyboard.down.on("key", this.onKeyDown, this);
     Keyboard.up.on("key", this.onKeyUp, this);
     window.addEventListener("blur", this.onBlur);
+    this.offAch = Achievements.onUnlock((a) => {
+      this.hud.showAchievement(a.icon, a.name);
+      Sfx.levelUp();
+    });
 
     if (run) {
       this.resume(run);
@@ -198,6 +214,7 @@ export class GameScene extends Container implements IScene {
     this.elapsed = run.elapsed;
     this.bossesBeaten = run.bosses;
     this.credits = run.credits;
+    this.livesLost = 1; // si continuó, ya perdió vidas
     this.runId = run.runId ?? this.runId;
     this.hud.setScore(this.score);
     this.hud.setLevel(this.level);
@@ -222,6 +239,9 @@ export class GameScene extends Container implements IScene {
   }
 
   private refreshArsenal(): void {
+    if (this.wallet >= 150) {
+      Achievements.unlock("ahorro");
+    }
     const w = this.weapon;
     this.hud.setArsenal(w ? w.name : null, w ? w.tex() : null, this.wallet, this.credits);
   }
@@ -244,6 +264,8 @@ export class GameScene extends Container implements IScene {
       } else {
         this.tryFire();
       }
+    } else if (POWER_KEYS.includes(code) && this.state === "playing") {
+      this.usePower();
     } else if (code === "KeyP" || code === "Escape") {
       this.togglePause();
     }
@@ -278,6 +300,7 @@ export class GameScene extends Container implements IScene {
     Keyboard.down.off("key", this.onKeyDown, this);
     Keyboard.up.off("key", this.onKeyUp, this);
     window.removeEventListener("blur", this.onBlur);
+    this.offAch();
     // la música la elige la pantalla siguiente (no se corta acá para no pisarla)
   }
 
@@ -322,6 +345,7 @@ export class GameScene extends Container implements IScene {
       this.spawn(dt);
       // mantener F apretada = dispara seguido (metralleta)
       this.fireCd -= dt;
+      this.updatePower(dt);
       if (this.weapon && !this.carrying && Keyboard.isDown(...THROW_KEYS)) {
         this.tryFire();
       }
@@ -542,7 +566,9 @@ export class GameScene extends Container implements IScene {
         continue;
       }
       const falling = this.player.vy > 0 && this.player.prevY <= eb.top + 22;
-      if (e.stompable && falling) {
+      if (this.turboT > 0 && !BULLET_PASS.has(e.label)) {
+        this.shootDown(e, "¡TURBO!");
+      } else if (e.stompable && falling) {
         this.stomp(e);
       } else {
         this.hurtPlayer(e.x);
@@ -653,6 +679,7 @@ export class GameScene extends Container implements IScene {
       vy = Math.max(-1000, Math.min(700, vy));
     }
     const sk = new ThrownSkull(x0, y0, dir, vy);
+    Achievements.add("skulls");
     this.thrown.push(sk);
     this.entities.addChild(sk);
     Sfx.throwIt();
@@ -713,6 +740,85 @@ export class GameScene extends Container implements IScene {
         this.thrown.splice(i, 1);
       }
     }
+  }
+
+  // ------------------------------------------------------------------ poder especial
+
+  private usePower(): void {
+    if (this.powerCd > 0 || this.state !== "playing") {
+      if (this.powerCd > 0) {
+        this.hud.nudgePower();
+      }
+      return;
+    }
+    const pw = this.def.power;
+    this.powerCd = pw.cooldown;
+    const p = this.player;
+    const dir = p.dir;
+    const cy = p.y - this.def.height / 2;
+    this.fx.floatText(p.x, p.y - this.def.height - 50, "¡" + pw.name + "!", "#ffe57f", 40);
+    switch (pw.id) {
+      case "grito": {
+        Sfx.roar();
+        this.shake(18, 0.4);
+        this.hud.flash(0xff9100, 0.35);
+        for (let i = 0; i < 3; i++) {
+          this.fx.burst(p.x, cy, { count: 40, colors: [0xffffff, 0xffcc80, 0xff9100], speed: 900 + i * 250, life: 0.5, gravity: 0, size: 1.1 });
+        }
+        for (const e of this.enemies) {
+          if (e.dead || BULLET_PASS.has(e.label)) continue;
+          const hb = e.getHitbox();
+          if (Math.hypot(hb.x + hb.width / 2 - p.x, hb.y + hb.height / 2 - cy) <= SHOUT_R) {
+            this.shootDown(e, "¡AAAH!");
+          }
+        }
+        const boss = this.boss;
+        if (boss && !boss.dying && Math.abs(boss.x - p.x) <= SHOUT_R + 150) {
+          this.chipBoss(boss, 0.5, boss.x, boss.y - 150);
+        }
+        break;
+      }
+      case "estrellas":
+        Sfx.throwIt();
+        for (const a of [-0.16, 0, 0.16]) {
+          const b = new Bullet(SHURIKEN, p.x + dir * 30, cy - 10, dir, a);
+          this.bullets.push(b);
+          this.entities.addChild(b);
+        }
+        break;
+      case "escudo":
+        Sfx.power();
+        this.shieldT = Math.max(this.shieldT, 6);
+        p.setShield(true);
+        this.fx.burst(p.x, cy, { count: 30, colors: [0xff1744, 0x00e5ff, 0xffffff], speed: 500, life: 0.5, gravity: 0 });
+        break;
+      case "turbo":
+        Sfx.whoosh();
+        this.turboT = 2.6;
+        p.speedMul = 1.9;
+        break;
+      case "pelotazo": {
+        Sfx.throwIt();
+        Sfx.stomp();
+        const b = new Bullet(BALL, p.x + dir * 40, p.y - 40, dir, -0.45);
+        this.bullets.push(b);
+        this.entities.addChild(b);
+        break;
+      }
+    }
+  }
+
+  private updatePower(dt: number): void {
+    this.powerCd = Math.max(0, this.powerCd - dt);
+    if (this.turboT > 0) {
+      this.turboT -= dt;
+      const p = this.player;
+      this.fx.burst(p.x - p.dir * 30, p.y - this.def.height * 0.4, { count: 3, colors: [0xff6d00, 0xffd54f, 0x40c4ff], speed: 200, life: 0.35, gravity: 0, size: 1 });
+      if (this.turboT <= 0) {
+        p.speedMul = 1;
+      }
+    }
+    this.hud.setPower(this.def.power.name, 1 - this.powerCd / this.def.power.cooldown);
   }
 
   // ------------------------------------------------------------------ armas
@@ -791,6 +897,7 @@ export class GameScene extends Container implements IScene {
   /** Enemigo volteado por una bala o la explosión. */
   private shootDown(e: { x: number; y: number; points: number; kill: () => void }, word: string): void {
     e.kill();
+    Achievements.add("shotKills");
     this.stomps++;
     const pts = e.points * this.level;
     this.addScore(pts);
@@ -805,6 +912,7 @@ export class GameScene extends Container implements IScene {
     this.shake(16, 0.3);
     this.fx.burst(x, y, { count: 40, colors: [0xffffff, 0xffeb3b, 0xff9800, 0xff3d00, 0x424242], speed: 650, life: 0.7, gravity: 300 });
     this.fx.floatText(x, y - 80, "¡KABOOM!", "#ff9100", 48);
+    let blasted = 0;
     for (const e of this.enemies) {
       if (e.dead || BULLET_PASS.has(e.label)) {
         continue;
@@ -814,7 +922,11 @@ export class GameScene extends Container implements IScene {
       const ey = Math.max(hb.top, Math.min(y, hb.bottom));
       if (Math.hypot(ex - x, ey - y) <= BLAST_R) {
         this.shootDown(e, "¡BOOM!");
+        blasted++;
       }
+    }
+    if (blasted >= 3) {
+      Achievements.unlock("kaboom");
     }
     const boss = this.boss;
     if (boss && !boss.dying) {
@@ -903,6 +1015,7 @@ export class GameScene extends Container implements IScene {
 
   private stomp(e: Enemy): void {
     e.kill();
+    Achievements.add("stomps");
     this.player.bounce();
     this.stomps++;
     const pts = e.points * this.level;
@@ -914,7 +1027,7 @@ export class GameScene extends Container implements IScene {
   }
 
   private hurtPlayer(fromX: number): void {
-    if (this.godMode || this.player.invulnerable) {
+    if (this.godMode || this.player.invulnerable || this.turboT > 0) {
       return;
     }
     const px = this.player.x;
@@ -931,6 +1044,7 @@ export class GameScene extends Container implements IScene {
       return;
     }
     this.lives--;
+    this.livesLost++;
     this.hud.setLives(this.lives, this.startLives);
     this.hud.flash(0xff1744, 0.55);
     this.shake(26, 0.45);
@@ -972,6 +1086,7 @@ export class GameScene extends Container implements IScene {
     this.coinsCollected += 1;
     this.totalCoins += 1;
     this.wallet += 1;
+    Achievements.add("coins");
     this.refreshArsenal();
     this.addScore(10 * (x2 ? 2 : 1));
     AudioCtl.coin();
@@ -1020,6 +1135,7 @@ export class GameScene extends Container implements IScene {
     this.fx.burst(p.x, p.y, { count: 50, colors: [0x18ffff, 0xb388ff, 0xffffff], speed: 700, life: 0.8, gravity: 0 });
     p.destroy({ children: true });
     this.portal = null;
+    Achievements.unlock("pasos");
     Sfx.portal();
     this.hud.flash(0xe1bee7, 0.9);
     this.shake(10, 0.25);
@@ -1058,6 +1174,7 @@ export class GameScene extends Container implements IScene {
       (id) => {
         this.wallet -= getWeapon(id).price;
         this.setWeapon(id);
+        Achievements.add(`w_${id}`);
       },
       () => this.closeShop(),
       next,
@@ -1155,6 +1272,16 @@ export class GameScene extends Container implements IScene {
     this.fx.floatText(boss.x, boss.y - 260, boss.hp > 0 ? "¡PUM!" : "¡K.O.!", "#ffeb3b", 64);
     if (boss.hp <= 0) {
       this.bossesBeaten++;
+      Achievements.add("bosses");
+      if (boss.cfg.final) {
+        Achievements.unlock("campeon");
+        if (this.livesLost === 0 && this.credits >= START_CREDITS) {
+          Achievements.unlock("intocable");
+        }
+        if (this.diff.id === "dificil") {
+          Achievements.unlock("leyenda");
+        }
+      }
       this.bossChip = 0;
       if (boss.cfg.final) {
         this.bossDefeated = true;

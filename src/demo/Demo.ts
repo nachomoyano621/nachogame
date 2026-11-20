@@ -50,6 +50,8 @@ interface GS {
   shop: { buy(id?: WeaponId): void; close(): void } | null;
   wallet: number;
   weapon: { id: WeaponId } | null;
+  powerCd: number;
+  usePower(): void;
   addEnemy(e: Enemy): void;
   debugGiveCoins(n: number): void;
   debugCoinRow(n: number): void;
@@ -163,6 +165,11 @@ class AutoPilot {
           this.throwCd = 1;
         }
       }
+    }
+
+    // poder especial cuando hay algo cerca adelante
+    if (s.powerCd <= 0 && s.enemies.some((e) => !e.dead && (e.x - p.x) * p.dir > 40 && (e.x - p.x) * p.dir < 480 && e.label !== "lava")) {
+      s.usePower();
     }
 
     // con arma: disparar (manteniendo F) a lo que venga de frente o al jefe

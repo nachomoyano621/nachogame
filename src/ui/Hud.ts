@@ -64,6 +64,16 @@ export class Hud extends Container {
   private lastScore = -1;
   private t = 0;
   private readonly gunIcon = new Sprite(Texture.EMPTY);
+  private readonly achToast = new Container();
+  private readonly powerRing = new Graphics();
+  private readonly powerText = new Text("", style({ fontSize: 22, strokeThickness: 5 }));
+  private readonly powerIcon = new Text("⚡", style({ fontSize: 34, strokeThickness: 0 }));
+  private powerFrac = -1;
+  private powerNudge = 0;
+  private readonly achIcon = new Text("", style({ fontSize: 52, strokeThickness: 0 }));
+  private readonly achName = new Text("", style({ fontSize: 32, strokeThickness: 6 }));
+  private readonly achQueue: [string, string][] = [];
+  private achT = 0;
   private readonly gunText = new Text("", style({ fontSize: 25, strokeThickness: 5 }));
   private readonly walletText = new Text("", style({ fontSize: 22, fill: "#ffeb3b", strokeThickness: 4 }));
   private readonly creditsText = new Text("", style({ fontSize: 20, fill: "#ff8a80", strokeThickness: 4 }));
@@ -117,6 +127,18 @@ export class Hud extends Container {
     this.creditsText.position.set(582, 200);
     this.addChild(this.creditsText);
     this.setArsenal(null, null, 0, 0);
+
+    // poder especial: anillo de recarga + nombre
+    const pbg = new Graphics();
+    pbg.beginFill(0x000000, 0.45);
+    pbg.drawRoundedRect(612, 154, 330, 62, 18);
+    pbg.endFill();
+    this.addChild(pbg, this.powerRing);
+    this.powerIcon.anchor.set(0.5);
+    this.powerIcon.position.set(648, 185);
+    this.powerText.anchor.set(0, 0.5);
+    this.powerText.position.set(688, 185);
+    this.addChild(this.powerIcon, this.powerText);
 
     // Centro: puntaje y barra de progreso hacia la victoria
     this.scoreText = new Text("0", style({ fontSize: 58, strokeThickness: 8 }));
@@ -184,6 +206,21 @@ export class Hud extends Container {
     this.addChild(this.bossBar);
 
     this.addChild(this.flashG);
+
+    // cartelito de logro (entra desde la derecha)
+    const ab = new Graphics();
+    ab.lineStyle(5, 0xffd600);
+    ab.beginFill(0x1a1200, 0.92);
+    ab.drawRoundedRect(0, 0, 520, 96, 20);
+    ab.endFill();
+    this.achIcon.anchor.set(0.5);
+    this.achIcon.position.set(56, 48);
+    const head = new Text("¡LOGRO DESBLOQUEADO!", style({ fontSize: 20, fill: "#ffd600", strokeThickness: 4 }));
+    head.position.set(108, 14);
+    this.achName.position.set(108, 42);
+    this.achToast.addChild(ab, this.achIcon, head, this.achName);
+    this.achToast.position.set(WIDTH + 20, 318);
+    this.addChild(this.achToast);
 
     const dim = new Graphics();
     dim.beginFill(0x000000, 0.6);
@@ -271,6 +308,48 @@ export class Hud extends Container {
     this.creditsText.text = `FICHAS ${"●".repeat(credits)}${"○".repeat(Math.max(0, 3 - credits))}`;
   }
 
+  /** Muestra (en cola) el aviso de un logro conseguido. */
+  public showAchievement(icon: string, name: string): void {
+    this.achQueue.push([icon, name]);
+  }
+
+  private updateAchievement(dt: number): void {
+    if (this.achT <= 0 && this.achQueue.length > 0) {
+      const [icon, name] = this.achQueue.shift() as [string, string];
+      this.achIcon.text = icon;
+      this.achName.text = name;
+      this.achT = 3.2;
+    }
+    if (this.achT > 0) {
+      this.achT -= dt;
+      const showX = WIDTH - 540;
+      const target = this.achT > 0.4 ? showX : WIDTH + 20;
+      this.achToast.x += (target - this.achToast.x) * Math.min(1, dt * 12);
+    }
+  }
+
+  /** Poder especial: frac = 1 listo, 0 recién usado. */
+  public setPower(name: string, frac: number): void {
+    const ready = frac >= 1;
+    this.powerText.text = "E: " + name;
+    this.powerText.style.fill = ready ? "#ffe57f" : "#9e9e9e";
+    if (Math.abs(frac - this.powerFrac) > 0.004 || (ready && this.powerFrac < 1)) {
+      this.powerFrac = frac;
+      const g = this.powerRing;
+      g.clear();
+      g.lineStyle(6, 0xffffff, 0.2);
+      g.drawCircle(648, 185, 24);
+      g.lineStyle(6, ready ? 0xffd600 : 0xff9100, 1);
+      g.arc(648, 185, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.001, Math.min(1, frac)));
+    }
+    this.powerIcon.alpha = ready ? 1 : 0.4;
+  }
+
+  /** Apretó el poder sin que esté listo: el anillo tiembla. */
+  public nudgePower(): void {
+    this.powerNudge = 0.3;
+  }
+
   public setLevel(n: number): void {
     this.levelText.text = n > WORLDS ? "JEFE FINAL" : `MUNDO ${n}/${WORLDS}`;
   }
@@ -342,6 +421,14 @@ export class Hud extends Container {
 
   public update(dt: number): void {
     this.t += dt;
+    this.updateAchievement(dt);
+    if (this.powerNudge > 0) {
+      this.powerNudge -= dt;
+      this.powerRing.x = Math.sin(this.t * 70) * 6 * Math.max(0, this.powerNudge) * 3;
+    } else {
+      this.powerRing.x = 0;
+    }
+    this.powerIcon.scale.set(this.powerFrac >= 1 ? 1 + Math.sin(this.t * 6) * 0.12 : 1);
     this.soundText.text = `M: sonido ${AudioCtl.muted ? "OFF" : "ON"}  ·  P: pausa`;
 
     for (const h of this.hearts) {
