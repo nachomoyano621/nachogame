@@ -16,7 +16,9 @@ import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { Background, LEVEL_NAMES } from "../game/Background";
-import { Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
+import { AcidBall, Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
+import { Bullet, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
+import { Shop } from "../ui/Shop";
 import { CharacterDef } from "../game/characters";
 import { Effects } from "../game/Effects";
 import { Bat, Boulder, DinoSkater, Enemy, EnemyCtx, Meteor, Mosasaur, MosquitoEnemy, Rex } from "../game/enemies";
@@ -25,14 +27,19 @@ import { Portal } from "../game/Portal";
 import { Coin, POWER_LABEL, PowerKind, PowerUp, SkullPickup, ThrownSkull } from "../game/pickups";
 import { WArt } from "../art/WorldArt";
 import { Player } from "../game/Player";
-import { GameStats } from "../game/types";
+import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { TouchControls } from "../ui/TouchControls";
 import { Keyboard } from "../utils/Keyboard";
 import { FinalScene } from "./FinalScene";
 import { WinScene } from "./WinScene";
 
-type State = "playing" | "paused" | "dying" | "won" | "done";
+type State = "playing" | "paused" | "shop" | "dying" | "won" | "done";
+
+/** Monedas extra a la billetera por vencer al jefe de un mundo. */
+const BOSS_BOUNTY = 20;
+/** Radio de la explosión de la bazooka. */
+const BLAST_R = 170;
 
 const MAGNET_TIME = 6;
 const X2_TIME = 9;
@@ -49,6 +56,10 @@ const LEVEL_MESSAGES: Record<number, string> = {
 
 /** Enemigos a los que el cráneo no les hace nada. */
 const SKULL_PROOF = new Set(["roca", "meteorito", "ladrillazo", "lava", "mosasaurio", "rex", "onda", ...Object.values(SHOTS).map((s) => s.label)]);
+/** Peligros que las balas atraviesan (no se pueden voltear). */
+const BULLET_PASS = new Set(["meteorito", "ladrillazo", "lava", "onda"]);
+/** Bichos blindados: sólo la bazooka los voltea (las demás balas rebotan). */
+const ARMORED = new Set(["roca", "mosasaurio", "rex"]);
 
 /** Índice del escenario del laboratorio en Background. */
 const LAB_THEME = WORLDS;
@@ -114,7 +125,20 @@ export class GameScene extends Container implements IScene {
   private alarmT = 0;
   private endTimer = 0;
 
-  constructor(private readonly def: CharacterDef, private readonly diff: Difficulty) {
+  /** Monedas para gastar en la armería (se acumulan entre mundos). */
+  private wallet = 0;
+  /** Fichas para CONTINUAR después de un Game Over. */
+  private credits = START_CREDITS;
+  private weapon: WeaponDef | null = null;
+  private bullets: Bullet[] = [];
+  private fireCd = 0;
+  /** Daño acumulado al jefe por las balas (al llegar a 1 = un golpe). */
+  private bossChip = 0;
+  private shop: Shop | null = null;
+  private afterShop: (() => void) | null = null;
+  private gunHintShown = false;
+
+  constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState) {
     super();
     this.startLives = Math.max(1, Math.min(MAX_LIVES, def.lives + diff.extraLives));
     this.lives = this.startLives;
@@ -146,14 +170,62 @@ export class GameScene extends Container implements IScene {
       this.world.addChild(this.debugG);
     }
 
-    this.hud.showBanner(`MUNDO 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
-    this.hud.showHint(`Juntá ${COINS_PER_WORLD} monedas en cada mundo para abrir el PORTAL · al final te espera el jefe\nSaltá ENCIMA de los monstruos para aplastarlos · ¡Esquivá rocas, fuego y medusas!`, 7);
-
     Keyboard.down.on("key", this.onKeyDown, this);
     Keyboard.up.on("key", this.onKeyUp, this);
     window.addEventListener("blur", this.onBlur);
 
-    AudioCtl.music(`world${this.level}`);
+    if (run) {
+      this.resume(run);
+    } else {
+      Storage.saveRun(null); // partida nueva: se descarta la que había para continuar
+      this.hud.showBanner(`MUNDO 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
+      this.hud.showHint(`Juntá ${COINS_PER_WORLD} monedas en cada mundo para abrir el PORTAL · al final te espera el jefe\nSaltá ENCIMA de los monstruos para aplastarlos · ¡Esquivá rocas, fuego y medusas!`, 7);
+      AudioCtl.music(`world${this.level}`);
+    }
+    this.refreshArsenal();
+  }
+
+  /** CONTINUAR: arranca en el mundo (o el laboratorio) donde se cayó, con la billetera y los puntos. */
+  private resume(run: RunState): void {
+    this.level = Math.max(1, Math.min(WORLDS, run.world));
+    this.wallet = run.wallet;
+    this.score = run.score;
+    this.totalCoins = run.totalCoins;
+    this.stomps = run.stomps;
+    this.elapsed = run.elapsed;
+    this.bossesBeaten = run.bosses;
+    this.credits = run.credits;
+    this.hud.setScore(this.score);
+    this.hud.setLevel(this.level);
+    this.hud.setCoins(0, this.level === WORLDS);
+    this.bg.setTheme(this.level - 1, 0.01);
+    // se guarda con las fichas que quedan (por si cierra el juego en el medio)
+    Storage.saveRun({ ...run });
+    // antes de seguir pasa por la ARMERÍA (el arma se perdió al caer, la billetera no)
+    if (run.lab) {
+      this.hud.setCoins(COINS_PER_WORLD, true);
+      this.hud.setLevel(WORLDS + 1);
+      this.openShop("LABORATORIO", () => {
+        this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
+        this.startBoss(FINAL_BOSS);
+      });
+    } else {
+      AudioCtl.music(`world${this.level}`);
+      this.openShop(`MUNDO ${this.level}`, () => {
+        this.hud.showBanner(`¡CONTINUAR! · MUNDO ${this.level}`, `${LEVEL_NAMES[this.level - 1]} · te quedan ${this.credits} fichas`, 2.6);
+      });
+    }
+  }
+
+  private refreshArsenal(): void {
+    const w = this.weapon;
+    this.hud.setArsenal(w ? w.name : null, w ? w.tex() : null, this.wallet, this.credits);
+  }
+
+  private setWeapon(id: WeaponId | null): void {
+    this.weapon = id ? getWeapon(id) : null;
+    this.player.setWeapon(this.weapon ? this.weapon.tex() : null, this.weapon?.anchor);
+    this.refreshArsenal();
   }
 
   // ------------------------------------------------------------------ input
@@ -162,7 +234,12 @@ export class GameScene extends Container implements IScene {
     if (JUMP_KEYS.includes(code) && this.state === "playing") {
       this.player.pressJump();
     } else if (THROW_KEYS.includes(code) && this.state === "playing") {
-      this.throwSkull();
+      if (this.carrying) {
+        this.throwSkull(); // si lleva un cráneo, F primero lo lanza
+        this.fireCd = Math.max(this.fireCd, 0.35);
+      } else {
+        this.tryFire();
+      }
     } else if (code === "KeyP" || code === "Escape") {
       this.togglePause();
     }
@@ -209,6 +286,10 @@ export class GameScene extends Container implements IScene {
   public update(dtMS: number): void {
     const dt = dtMS / 1000;
     this.hud.update(dt);
+    if (this.state === "shop") {
+      this.shop?.update(dt);
+      return;
+    }
     if (this.state === "paused" || this.state === "done") {
       return;
     }
@@ -235,6 +316,11 @@ export class GameScene extends Container implements IScene {
       }
       this.updateTimers(dt);
       this.spawn(dt);
+      // mantener F apretada = dispara seguido (metralleta)
+      this.fireCd -= dt;
+      if (this.weapon && !this.carrying && Keyboard.isDown(...THROW_KEYS)) {
+        this.tryFire();
+      }
     }
 
     this.updateEnemies(dt);
@@ -243,6 +329,7 @@ export class GameScene extends Container implements IScene {
     this.updateCoins(dt, worldSpeed);
     this.updatePowerUps(dt, worldSpeed);
     this.updateSkulls(dt, worldSpeed);
+    this.updateBullets(dt);
     this.fx.update(dt);
     this.updateShake(dt);
     this.drawDebug();
@@ -624,6 +711,133 @@ export class GameScene extends Container implements IScene {
     }
   }
 
+  // ------------------------------------------------------------------ armas
+
+  private tryFire(): void {
+    const w = this.weapon;
+    if (!w || this.fireCd > 0 || this.state !== "playing") {
+      return;
+    }
+    this.fireCd = w.cooldown;
+    const dir = this.player.dir;
+    const m = this.player.muzzle();
+    for (let i = 0; i < w.pellets; i++) {
+      const spread = w.pellets > 1 ? (i - (w.pellets - 1) / 2) * w.spread : (Math.random() - 0.5) * w.spread;
+      const b = new Bullet(w, m.x, m.y, dir, spread);
+      this.bullets.push(b);
+      this.entities.addChild(b);
+    }
+    this.player.recoil();
+    Sfx.shoot(w.id);
+    this.fx.burst(m.x + dir * 20, m.y, { count: w.explosive ? 12 : 4, colors: [0xffffff, 0xffeb3b, 0xff9800], speed: 220, life: 0.18, gravity: 0, size: 0.8 });
+    if (w.explosive) {
+      this.player.vx -= dir * 260; // retroceso de la bazooka
+      this.shake(6, 0.12);
+    }
+  }
+
+  private updateBullets(dt: number): void {
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      let done = b.tick(dt);
+      if (done && b.def.explosive) {
+        this.explode(b.x, Math.min(b.y, GROUND_Y - 20));
+      }
+      const hb = b.getHitbox();
+      for (const e of this.enemies) {
+        if (done || e.dead || b.hit.has(e) || BULLET_PASS.has(e.label) || !intersects(hb, e.getHitbox())) {
+          continue;
+        }
+        b.hit.add(e);
+        if (b.def.explosive) {
+          this.explode(b.x, b.y);
+          done = true;
+        } else if (e instanceof AcidBall) {
+          // derriba los disparos del jefe
+          e.kill();
+          this.fx.burst(e.x, e.y, { count: 10, colors: [0xffffff, 0xb2ff59], speed: 300, life: 0.35 });
+          this.addScore(15);
+          done = true;
+        } else if (ARMORED.has(e.label)) {
+          this.fx.floatText(e.x, e.y - 100, "¡CLANK!", "#cfd8dc", 32);
+          this.fx.burst(b.x, b.y, { count: 5, colors: [0xffffff, 0xffeb3b], speed: 260, life: 0.25 });
+          done = true;
+        } else {
+          this.shootDown(e, "¡BANG!");
+          b.pierceLeft--;
+          done = b.pierceLeft <= 0;
+        }
+      }
+      const boss = this.boss;
+      if (!done && boss && !boss.dying && intersects(hb, boss.bodyBox())) {
+        if (b.def.explosive) {
+          this.explode(b.x, b.y);
+        } else {
+          this.chipBoss(boss, b.def.bossDmg, b.x, b.y);
+        }
+        done = true;
+      }
+      if (done) {
+        b.destroy();
+        this.bullets.splice(i, 1);
+      }
+    }
+  }
+
+  /** Enemigo volteado por una bala o la explosión. */
+  private shootDown(e: { x: number; y: number; points: number; kill: () => void }, word: string): void {
+    e.kill();
+    this.stomps++;
+    const pts = e.points * this.level;
+    this.addScore(pts);
+    Sfx.stomp();
+    this.fx.burst(e.x, e.y - 40, { count: 12, colors: [0xffffff, 0xffeb3b, 0xff7043], speed: 380, life: 0.45 });
+    this.fx.floatText(e.x, e.y - 110, `${word} +${Math.round(pts * this.diff.scoreMul)}`, "#ffe082", 34);
+  }
+
+  /** Explosión de la bazooka: voltea todo lo que esté cerca (hasta rocas y al Rex) y le pega al jefe. */
+  private explode(x: number, y: number): void {
+    Sfx.boom();
+    this.shake(16, 0.3);
+    this.fx.burst(x, y, { count: 40, colors: [0xffffff, 0xffeb3b, 0xff9800, 0xff3d00, 0x424242], speed: 650, life: 0.7, gravity: 300 });
+    this.fx.floatText(x, y - 80, "¡KABOOM!", "#ff9100", 48);
+    for (const e of this.enemies) {
+      if (e.dead || BULLET_PASS.has(e.label)) {
+        continue;
+      }
+      const hb = e.getHitbox();
+      const ex = Math.max(hb.left, Math.min(x, hb.right));
+      const ey = Math.max(hb.top, Math.min(y, hb.bottom));
+      if (Math.hypot(ex - x, ey - y) <= BLAST_R) {
+        this.shootDown(e, "¡BOOM!");
+      }
+    }
+    const boss = this.boss;
+    if (boss && !boss.dying) {
+      const bb = boss.bodyBox();
+      const ex = Math.max(bb.left, Math.min(x, bb.right));
+      const ey = Math.max(bb.top, Math.min(y, bb.bottom));
+      if (Math.hypot(ex - x, ey - y) <= BLAST_R) {
+        this.chipBoss(boss, this.weapon?.bossDmg ?? 0.6, x, y);
+      }
+    }
+  }
+
+  /** Las balas le van sacando de a poco: cada 1 punto acumulado es como un salto en la cabeza. */
+  private chipBoss(boss: Boss, dmg: number, x: number, y: number): void {
+    // mientras está golpeado (parpadeando) las balas no le hacen nada
+    if (!boss.harmful && !boss.stunned) {
+      this.fx.floatText(x, y - 40, "¡TOC!", "#ffffff", 28);
+      return;
+    }
+    this.bossChip += dmg;
+    this.fx.burst(x, y, { count: 6, colors: [0xffffff, boss.cfg.color], speed: 260, life: 0.3 });
+    if (this.bossChip >= 1) {
+      this.bossChip -= 1;
+      this.damageBoss(boss);
+    }
+  }
+
   private updatePowerUps(dt: number, speed: number): void {
     const pb = this.player.getHitbox();
     for (let i = this.powerUps.length - 1; i >= 0; i--) {
@@ -719,6 +933,11 @@ export class GameScene extends Container implements IScene {
     this.hitStop = 0.12;
     this.fx.burst(px, py, { count: 24, colors: [0xff1744, 0xffffff, 0xffeb3b], speed: 520, life: 0.6 });
     this.fx.floatText(px, py - 120, "-1 VIDA", "#ff5252", 52);
+    if (this.weapon) {
+      this.fx.floatText(px, py - 190, `¡PERDISTE LA ${this.weapon.name}!`, "#ff8a80", 40);
+      this.fx.burst(px, py, { count: 12, colors: [0x455a64, 0x90a4ae], speed: 400, life: 0.6, gravity: 900 });
+      this.setWeapon(null);
+    }
     if (this.lives <= 0) {
       this.die();
       return;
@@ -748,6 +967,8 @@ export class GameScene extends Container implements IScene {
     const x2 = this.x2T > 0;
     this.coinsCollected += 1;
     this.totalCoins += 1;
+    this.wallet += 1;
+    this.refreshArsenal();
     this.addScore(10 * (x2 ? 2 : 1));
     AudioCtl.coin();
     this.fx.burst(c.x, c.y, { count: 8, colors: [0xffeb3b, 0xffc107, 0xffffff], speed: 260, life: 0.4, gravity: 300 });
@@ -816,6 +1037,50 @@ export class GameScene extends Container implements IScene {
     // el contador de monedas vuelve a 0 en cada pantalla nueva
     this.coinsCollected = 0;
     this.worldBossBeaten = false;
+    for (const b of this.bullets) {
+      b.destroy();
+    }
+    this.bullets = [];
+    this.openShop(this.level >= WORLDS ? "LABORATORIO" : `MUNDO ${this.level + 1}`, () => this.advanceWorld());
+  }
+
+  /** ARMERÍA entre mundos: se gasta la billetera en un arma para la pantalla siguiente. */
+  private openShop(next: string, then: () => void): void {
+    this.state = "shop";
+    this.afterShop = then;
+    this.shop = new Shop(
+      this.wallet,
+      this.weapon?.id ?? null,
+      (id) => {
+        this.wallet -= getWeapon(id).price;
+        this.setWeapon(id);
+      },
+      () => this.closeShop(),
+      next,
+    );
+    this.addChild(this.shop);
+  }
+
+  private closeShop(): void {
+    const shop = this.shop;
+    if (!shop) {
+      return;
+    }
+    this.shop = null;
+    shop.destroy({ children: true });
+    this.state = "playing";
+    this.fireCd = 0.3; // que el ENTER/F de la tienda no dispare
+    this.player.makeInvulnerable(1.5);
+    if (this.weapon && !this.gunHintShown) {
+      this.gunHintShown = true;
+      this.hud.showHint(`¡Tenés ${this.weapon.name}!  Apretá F (o X) para disparar · si perdés una vida, la perdés`, 4.5);
+    }
+    const then = this.afterShop;
+    this.afterShop = null;
+    then?.();
+  }
+
+  private advanceWorld(): void {
     if (this.level >= WORLDS) {
       this.hud.setCoins(COINS_PER_WORLD, true);
       this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
@@ -838,6 +1103,7 @@ export class GameScene extends Container implements IScene {
   private startBoss(cfg: BossConfig): void {
     const hp = Math.max(2, Math.round(this.diff.bossHp * cfg.hpMul));
     this.boss = new Boss(cfg, hp, this.diff.speed);
+    this.bossChip = 0;
     this.boss.on("stunned", () => this.hud.showHint("¡ESTÁ MAREADO!  ¡SALTALE EN LA CABEZA!", 2.2));
     this.entities.addChildAt(this.boss, 0);
     this.hud.showBoss(cfg.name, cfg.color);
@@ -865,26 +1131,36 @@ export class GameScene extends Container implements IScene {
     this.coins = [];
   }
 
+  /** Salto en la cabeza del jefe mareado. */
   private hitBoss(boss: Boss): void {
-    boss.hit();
     this.player.bounce();
     this.player.vy = -1150;
     this.player.makeInvulnerable(1);
+    this.fx.burst(this.player.x, this.player.y, { count: 30, colors: [0xffffff, 0xffeb3b, 0x76ff03], speed: 600, life: 0.7 });
+    this.damageBoss(boss);
+  }
+
+  /** Le saca una vida al jefe (por salto o por las balas acumuladas). */
+  private damageBoss(boss: Boss): void {
+    boss.hit();
     this.addScore(300);
     Sfx.stomp();
     this.shake(18, 0.35);
     this.hitStop = 0.1;
     this.hud.setBossHp(boss.hp, boss.maxHp);
-    this.fx.burst(this.player.x, this.player.y, { count: 30, colors: [0xffffff, 0xffeb3b, 0x76ff03], speed: 600, life: 0.7 });
-    this.fx.floatText(this.player.x, this.player.y - 160, boss.hp > 0 ? "¡PUM!" : "¡K.O.!", "#ffeb3b", 64);
+    this.fx.floatText(boss.x, boss.y - 260, boss.hp > 0 ? "¡PUM!" : "¡K.O.!", "#ffeb3b", 64);
     if (boss.hp <= 0) {
       this.bossesBeaten++;
+      this.bossChip = 0;
       if (boss.cfg.final) {
         this.bossDefeated = true;
         this.addScore(2000);
       } else {
         this.worldBossBeaten = true;
         this.addScore(800);
+        this.wallet += BOSS_BOUNTY;
+        this.refreshArsenal();
+        this.fx.floatText(boss.x, boss.y - 340, `+${BOSS_BOUNTY} A LA BILLETERA`, "#ffeb3b", 44);
       }
       this.hud.showBanner(`¡VENCISTE AL ${boss.cfg.final ? "DINO-X" : boss.cfg.name}!`, "", 2.4);
     } else if (boss.enraged) {
@@ -967,6 +1243,27 @@ export class GameScene extends Container implements IScene {
       best: Math.max(best, this.score),
       newRecord,
     };
+    if (won) {
+      Storage.saveRun(null);
+    } else {
+      // para CONTINUAR desde este mundo (si quedan fichas)
+      const run: RunState = {
+        characterId: this.def.id,
+        difficulty: this.diff.id,
+        world: this.level,
+        lab: this.finalReached,
+        wallet: this.wallet,
+        score: this.score,
+        totalCoins: this.totalCoins,
+        stomps: this.stomps,
+        elapsed: this.elapsed,
+        // si ya había vencido al jefe de este mundo pero no entró al portal, lo vuelve a pelear
+        bosses: this.bossesBeaten - (this.worldBossBeaten ? 1 : 0),
+        credits: this.credits,
+      };
+      stats.run = run;
+      Storage.saveRun(this.credits > 0 ? run : null);
+    }
     this.state = "done"; // congela hasta que se aplique el cambio de escena
     SceneManager.change(won ? new WinScene(stats) : new FinalScene(stats));
   }

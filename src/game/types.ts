@@ -1,6 +1,30 @@
 import { DifficultyId } from "../config";
 import { CharacterId } from "./characters";
 
+/** Fichas para continuar que tiene cada partida nueva. */
+export const START_CREDITS = 3;
+
+/**
+ * Estado de una partida para poder CONTINUAR después de un Game Over
+ * (desde el mismo mundo, conservando billetera, puntos y jefes vencidos).
+ */
+export interface RunState {
+  characterId: CharacterId;
+  difficulty: DifficultyId;
+  /** Mundo donde se cayó (1..7). */
+  world: number;
+  /** Se cayó en el laboratorio (pelea con el DINO-X). */
+  lab: boolean;
+  wallet: number;
+  score: number;
+  totalCoins: number;
+  stomps: number;
+  elapsed: number;
+  bosses: number;
+  /** Fichas que quedan para continuar. */
+  credits: number;
+}
+
 export interface GameStats {
   score: number;
   coins: number;
@@ -16,4 +40,6 @@ export interface GameStats {
   bosses: number;
   best: number;
   newRecord: boolean;
+  /** Para continuar (sólo en Game Over y si quedan fichas). */
+  run?: RunState;
 }

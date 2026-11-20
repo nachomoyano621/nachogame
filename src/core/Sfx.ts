@@ -127,6 +127,26 @@ export class Sfx {
     Sfx.arp([262, 330, 392, 523, 659, 784, 1047, 1319], 0.045, "sine", 0.12);
     Sfx.tone(200, 1600, 0.5, "triangle", 0.05);
   }
+  /** Disparo según el arma. */
+  public static shoot(kind: string): void {
+    switch (kind) {
+      case "bazooka":
+        Sfx.tone(220, 60, 0.35, "sawtooth", 0.14);
+        Sfx.tone(900, 200, 0.2, "triangle", 0.05);
+        break;
+      case "shotgun":
+        Sfx.tone(260, 40, 0.25, "sawtooth", 0.16);
+        break;
+      case "revolver":
+        Sfx.tone(700, 70, 0.22, "square", 0.1);
+        break;
+      case "smg":
+        Sfx.tone(900, 160, 0.06, "square", 0.05);
+        break;
+      default:
+        Sfx.tone(1000, 140, 0.12, "square", 0.07);
+    }
+  }
   public static click(): void {
     Sfx.tone(700, 900, 0.06, "square", 0.04);
   }

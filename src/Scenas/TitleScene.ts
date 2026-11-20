@@ -2,14 +2,17 @@ import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Text, Texture, 
 import { AudioCtl } from "../core/AudioCtl";
 import { Art } from "../art/ProceduralArt";
 import { WArt } from "../art/WorldArt";
-import { HEIGHT, WIDTH, WORLDS } from "../config";
+import { HEIGHT, WIDTH, WORLDS, getDifficulty } from "../config";
+import { Storage } from "../core/Storage";
 import { IScene, SceneManager } from "../core/SceneManager";
 import { Sfx } from "../core/Sfx";
 import { Background, LEVEL_NAMES } from "../game/Background";
-import { CHARACTERS } from "../game/characters";
+import { CHARACTERS, getCharacter } from "../game/characters";
+import { START_CREDITS } from "../game/types";
 import { Effects } from "../game/Effects";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
+import { GameScene } from "./GameScene";
 import { StartScene } from "./StartScene";
 
 const STRIPE = 140;
@@ -142,6 +145,23 @@ export class TitleScene extends Container implements IScene {
     this.press.position.set(WIDTH / 2, 730);
     this.addChild(this.press);
 
+    // partida guardada para CONTINUAR (después de un Game Over con fichas)
+    const run = Storage.run;
+    if (run && run.credits > 0) {
+      const fichas = "●".repeat(run.credits) + "○".repeat(Math.max(0, START_CREDITS - run.credits));
+      const where = run.lab ? "LABORATORIO" : `MUNDO ${run.world}`;
+      const cont = new Text(`C: CONTINUAR  ·  ${where}  ·  FICHAS ${fichas}`, style({ fontSize: 36, fill: "#b9f6ca", strokeThickness: 7 }));
+      cont.anchor.set(0.5);
+      cont.position.set(WIDTH / 2, 795);
+      cont.interactive = true;
+      cont.cursor = "pointer";
+      cont.on("pointertap", (e: { stopPropagation: () => void }) => {
+        e.stopPropagation();
+        this.continueRun();
+      });
+      this.addChild(cont);
+    }
+
     // piso rojinegro (damero que se desplaza) con línea blanca arriba
     const tileG = new Graphics();
     for (let row = 0; row < 2; row++) {
@@ -199,7 +219,19 @@ export class TitleScene extends Container implements IScene {
   private onKey(code: string): void {
     if (code === "Enter" || code === "NumpadEnter" || code === "Space") {
       this.go();
+    } else if (code === "KeyC") {
+      this.continueRun();
     }
+  }
+
+  /** Sigue la partida guardada gastando una ficha. */
+  private continueRun(): void {
+    const run = Storage.run;
+    if (this.ready > 0 || !run || run.credits <= 0) {
+      return;
+    }
+    Sfx.click();
+    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }));
   }
 
   private go(): void {

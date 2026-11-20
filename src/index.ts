@@ -4,6 +4,7 @@ import "@pixi/sound";
 import { assets } from "./Componentes/assets";
 import { Art, buildArt } from "./art/ProceduralArt";
 import { WArt, buildWorldArt } from "./art/WorldArt";
+import { buildWeaponArt } from "./art/WeaponArt";
 import { WORLD_ENEMIES } from "./game/worldEnemies";
 import { HEIGHT, WIDTH } from "./config";
 import { AudioCtl } from "./core/AudioCtl";
@@ -66,6 +67,7 @@ Loader.shared.load(() => {
 
   buildArt(app.renderer);
   buildWorldArt(app.renderer);
+  buildWeaponArt(app.renderer);
   AudioCtl.init();
   SceneManager.init(app);
   SceneManager.change(new TitleScene());

@@ -1,3 +1,5 @@
+import type { RunState } from "../game/types";
+
 const KEY = "tomigame.v2";
 
 interface SaveData {
@@ -6,9 +8,11 @@ interface SaveData {
   difficulty: string;
   muted: boolean;
   character: string;
+  /** Partida guardada para CONTINUAR (null = no hay). */
+  run: RunState | null;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo" };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null };
 
 function read(): SaveData {
   try {
@@ -55,6 +59,13 @@ export const Storage = {
   },
   setMuted(m: boolean): void {
     write({ muted: m });
+  },
+  /** Partida para continuar (si quedó una con fichas). */
+  get run(): RunState | null {
+    return read().run;
+  },
+  saveRun(run: RunState | null): void {
+    write({ run });
   },
   get character(): string {
     return read().character;

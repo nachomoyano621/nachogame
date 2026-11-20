@@ -5,7 +5,7 @@ import { IScene, SceneManager } from "../core/SceneManager";
 import { LEVEL_NAMES } from "../game/Background";
 import { Effects } from "../game/Effects";
 import { getCharacter, scaleFor } from "../game/characters";
-import { GameStats } from "../game/types";
+import { GameStats, START_CREDITS } from "../game/types";
 import { TextButton } from "../ui/Button";
 import { StatsPanel } from "../ui/StatsPanel";
 import { style } from "../ui/styles";
@@ -105,11 +105,33 @@ export class FinalScene extends Container implements IScene {
     this.panel.position.set(WIDTH / 2, 690);
     this.addChild(this.panel);
 
-    const retry = new TextButton("↻  REINTENTAR (ENTER)", () => this.retry(), { width: 560, color: 0xff5252 });
-    retry.position.set(WIDTH / 2 - 310, 960);
-    const menu = new TextButton("☰  MENÚ (ESC)", () => this.menu(), { width: 460, color: 0x29b6f6 });
-    menu.position.set(WIDTH / 2 + 310, 960);
-    this.addChild(retry, menu);
+    if (this.canContinue) {
+      const left = stats.run?.credits ?? 0;
+      const fichas = "●".repeat(left) + "○".repeat(Math.max(0, START_CREDITS - left));
+      const cont = new TextButton("▶  CONTINUAR (ENTER)", () => this.continueRun(), { width: 600, color: 0x43a047 });
+      cont.position.set(WIDTH / 2 - 455, 960);
+      const retry = new TextButton("↻  DE CERO (R)", () => this.retry(), { width: 440, color: 0xff5252 });
+      retry.position.set(WIDTH / 2 + 95, 960);
+      const menu = new TextButton("☰  MENÚ (ESC)", () => this.menu(), { width: 380, color: 0x29b6f6 });
+      menu.position.set(WIDTH / 2 + 535, 960);
+      const at = stats.run?.lab ? "LABORATORIO" : `MUNDO ${stats.run?.world ?? 1}`;
+      const info = new Text(`FICHAS ${fichas} (continuar gasta 1)  ·  seguís en el ${at} con tu billetera (${stats.run?.wallet ?? 0} monedas) y tus puntos`, style({ fontSize: 28, fill: "#b9f6ca", strokeThickness: 5 }));
+      info.anchor.set(0.5);
+      info.position.set(WIDTH / 2, 1040);
+      this.addChild(cont, retry, menu, info);
+    } else {
+      const retry = new TextButton("↻  REINTENTAR (ENTER)", () => this.retry(), { width: 560, color: 0xff5252 });
+      retry.position.set(WIDTH / 2 - 310, 960);
+      const menu = new TextButton("☰  MENÚ (ESC)", () => this.menu(), { width: 460, color: 0x29b6f6 });
+      menu.position.set(WIDTH / 2 + 310, 960);
+      this.addChild(retry, menu);
+      if (stats.run) {
+        const info = new Text("Sin fichas para continuar: ¡a empezar de nuevo!", style({ fontSize: 28, fill: "#ff8a80", strokeThickness: 5 }));
+        info.anchor.set(0.5);
+        info.position.set(WIDTH / 2, 1040);
+        this.addChild(info);
+      }
+    }
 
     Keyboard.down.on("key", this.onKey, this);
   }
@@ -118,11 +140,30 @@ export class FinalScene extends Container implements IScene {
     if (this.ready > 0) {
       return;
     }
-    if (code === "Enter" || code === "NumpadEnter" || code === "Space") {
+    if (code === "Enter" || code === "NumpadEnter" || code === "Space" || code === "KeyC") {
+      if (this.canContinue) {
+        this.continueRun();
+      } else if (code !== "KeyC") {
+        this.retry();
+      }
+    } else if (code === "KeyR") {
       this.retry();
     } else if (code === "Escape") {
       this.menu();
     }
+  }
+
+  private get canContinue(): boolean {
+    return !!this.stats.run && this.stats.run.credits > 0;
+  }
+
+  /** Gasta una ficha y sigue en el mismo mundo. */
+  private continueRun(): void {
+    const run = this.stats.run;
+    if (!run || run.credits <= 0) {
+      return;
+    }
+    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }));
   }
 
   private retry(): void {

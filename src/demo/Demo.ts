@@ -11,6 +11,7 @@ import { Player } from "../game/Player";
 import { Portal } from "../game/Portal";
 import { Coin } from "../game/pickups";
 import { GameStats } from "../game/types";
+import { WEAPONS, WeaponId } from "../game/weapons";
 import { Hud } from "../ui/Hud";
 import { FinalScene } from "../Scenas/FinalScene";
 import { GameScene } from "../Scenas/GameScene";
@@ -46,6 +47,9 @@ interface GS {
   def: CharacterDef;
   skulls: { x: number }[];
   carrying: boolean;
+  shop: { buy(id?: WeaponId): void; close(): void } | null;
+  wallet: number;
+  weapon: { id: WeaponId } | null;
   addEnemy(e: Enemy): void;
   debugGiveCoins(n: number): void;
   debugCoinRow(n: number): void;
@@ -158,6 +162,18 @@ class AutoPilot {
           tap("KeyF");
           this.throwCd = 1;
         }
+      }
+    }
+
+    // con arma: disparar (manteniendo F) a lo que venga de frente o al jefe
+    if (s.weapon && !s.carrying) {
+      const pass = ["meteorito", "ladrillazo", "lava", "onda"];
+      const ahead = (x: number): boolean => (x - p.x) * p.dir > 60 && (x - p.x) * p.dir < 950;
+      const shoot = s.enemies.some((e) => !e.dead && !pass.includes(e.label) && ahead(e.x)) || (!!s.boss && ahead(s.boss.x));
+      if (shoot) {
+        Keyboard.press("KeyF");
+      } else {
+        Keyboard.release("KeyF");
       }
     }
 
@@ -284,6 +300,23 @@ function mark(name: string): void {
   marks.push({ name, t: Math.round(((performance.now() - recT0) / 1000) * 100) / 100 });
 }
 
+/** En la ARMERÍA: mira un ratito, compra la mejor arma que le alcance y sigue. */
+async function shopping(s: GS): Promise<void> {
+  await waitUntil(() => s.state === "shop" || scene() !== s, 3);
+  if (s.state !== "shop" || !s.shop) {
+    return;
+  }
+  mark("shop");
+  Keyboard.release("KeyF");
+  await sleep(1.2);
+  const best = [...WEAPONS].reverse().find((w) => w.price <= s.wallet && w.id !== s.weapon?.id);
+  if (best && s.shop) {
+    s.shop.buy(best.id);
+    await sleep(1.3);
+  }
+  s.shop?.close();
+}
+
 /** Completa las monedas que faltan para las 50 del mundo (de a poco, para que se vea la barra) y entra al portal. */
 async function goThroughPortal(): Promise<void> {
   const s = scene();
@@ -311,6 +344,7 @@ async function goThroughPortal(): Promise<void> {
   if (s.portal && s.level === lvl && !s.boss) {
     s.enterPortal(); // si igual no llegó, entra
   }
+  await shopping(s);
   const ns = scene();
   if (ns) {
     mark(ns.boss ? "lab" : `world${ns.level}`);

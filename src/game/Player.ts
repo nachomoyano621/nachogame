@@ -34,6 +34,9 @@ export class Player extends Container {
   private readonly baseScale: number;
   private readonly shieldG = new Graphics();
   private readonly carry = new Sprite(Texture.EMPTY);
+  /** Arma en la mano (se da vuelta según hacia dónde mira). */
+  private readonly gun = new Sprite(Texture.EMPTY);
+  private gunKick = 0;
 
   constructor(public readonly def: CharacterDef) {
     super();
@@ -55,6 +58,8 @@ export class Player extends Container {
     this.shieldG.visible = false;
     this.addChild(this.shieldG);
 
+    this.gun.visible = false;
+    this.addChild(this.gun);
     this.carry.anchor.set(0.5);
     this.carry.y = -def.height - 34;
     this.carry.visible = false;
@@ -78,6 +83,25 @@ export class Player extends Container {
   }
 
   /** Muestra (o saca) el objeto que lleva sobre la cabeza, ej: el cráneo. */
+  /** Pone (o saca) el arma en la mano. `anchor` = punto de la empuñadura dentro del dibujo. */
+  public setWeapon(tex: Texture | null, anchor: [number, number] = [0.2, 0.5]): void {
+    this.gun.texture = tex ?? Texture.EMPTY;
+    this.gun.anchor.set(anchor[0], anchor[1]);
+    this.gun.visible = tex !== null;
+    const k = tex ? Math.min(0.7, (this.def.height * 0.55) / tex.width) : 1;
+    this.gun.scale.set(k);
+  }
+
+  /** De dónde salen las balas (punta del arma). */
+  public muzzle(): { x: number; y: number } {
+    return { x: this.x + this.facing * this.def.height * 0.42, y: this.y - this.def.height * 0.48 };
+  }
+
+  /** Retroceso del arma al disparar. */
+  public recoil(): void {
+    this.gunKick = 1;
+  }
+
   public setCarry(tex: Texture | null): void {
     this.carry.texture = tex ?? Texture.EMPTY;
     this.carry.visible = tex !== null;
@@ -231,6 +255,15 @@ export class Player extends Container {
       this.sprite.alpha = Math.floor(this.t * 18) % 2 === 0 ? 0.25 : 1;
     } else {
       this.sprite.alpha = 1;
+    }
+
+    if (this.gun.visible) {
+      // el arma a la altura de la mano, apuntando hacia donde mira
+      this.gunKick = Math.max(0, this.gunKick - dt * 8);
+      const s = Math.abs(this.gun.scale.y);
+      this.gun.scale.set(this.facing * s, s);
+      this.gun.position.set(this.facing * (this.def.height * 0.16 - this.gunKick * 10), -this.def.height * 0.46 + (this.squash - 1) * 20);
+      this.gun.rotation = -this.facing * this.gunKick * 0.25;
     }
 
     if (this.carry.visible) {

@@ -63,6 +63,10 @@ export class Hud extends Container {
   private lastCoins = -1;
   private lastScore = -1;
   private t = 0;
+  private readonly gunIcon = new Sprite(Texture.EMPTY);
+  private readonly gunText = new Text("", style({ fontSize: 25, strokeThickness: 5 }));
+  private readonly walletText = new Text("", style({ fontSize: 22, fill: "#ffeb3b", strokeThickness: 4 }));
+  private readonly creditsText = new Text("", style({ fontSize: 20, fill: "#ff8a80", strokeThickness: 4 }));
 
   constructor(best: number) {
     super();
@@ -93,6 +97,26 @@ export class Hud extends Container {
     this.levelText.anchor.set(1, 0);
     this.levelText.position.set(470, 95);
     this.addChild(this.levelText);
+
+    // Debajo: arma en la mano, billetera y fichas para continuar
+    const arsenal = new Graphics();
+    arsenal.beginFill(0x000000, 0.45);
+    arsenal.drawRoundedRect(18, 154, 580, 62, 18);
+    arsenal.endFill();
+    this.addChild(arsenal);
+    this.gunIcon.anchor.set(0.5);
+    this.gunIcon.position.set(70, 185);
+    this.addChild(this.gunIcon);
+    this.gunText.anchor.set(0, 0.5);
+    this.gunText.position.set(122, 185);
+    this.addChild(this.gunText);
+    this.walletText.anchor.set(1, 0.5);
+    this.walletText.position.set(582, 172);
+    this.addChild(this.walletText);
+    this.creditsText.anchor.set(1, 0.5);
+    this.creditsText.position.set(582, 200);
+    this.addChild(this.creditsText);
+    this.setArsenal(null, null, 0, 0);
 
     // Centro: puntaje y barra de progreso hacia la victoria
     this.scoreText = new Text("0", style({ fontSize: 58, strokeThickness: 8 }));
@@ -231,6 +255,20 @@ export class Hud extends Container {
       this.lastScore = n;
       this.scoreText.text = `${n}`;
     }
+  }
+
+  /** Arma actual (o ninguna), billetera para la armería y fichas para continuar. */
+  public setArsenal(name: string | null, tex: Texture | null, wallet: number, credits: number): void {
+    this.gunIcon.texture = tex ?? Texture.EMPTY;
+    this.gunIcon.visible = tex !== null;
+    if (tex) {
+      this.gunIcon.scale.set(Math.min(80 / tex.width, 44 / tex.height));
+    }
+    this.gunText.text = name ? `${name}  (F)` : "SIN ARMA";
+    this.gunText.style.fill = name ? "#ffffff" : "#9e9e9e";
+    this.gunText.x = tex ? 122 : 40;
+    this.walletText.text = `BILLETERA ${wallet}`;
+    this.creditsText.text = `FICHAS ${"●".repeat(credits)}${"○".repeat(Math.max(0, 3 - credits))}`;
   }
 
   public setLevel(n: number): void {
