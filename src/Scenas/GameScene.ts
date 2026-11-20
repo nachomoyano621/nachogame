@@ -29,6 +29,7 @@ import { Portal } from "../game/Portal";
 import { Coin, POWER_LABEL, PowerKind, PowerUp, SkullPickup, ThrownSkull } from "../game/pickups";
 import { WArt } from "../art/WorldArt";
 import { Player } from "../game/Player";
+import { Tutorial } from "../game/Tutorial";
 import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { TouchControls } from "../ui/TouchControls";
@@ -73,6 +74,8 @@ const LAB_THEME = WORLDS;
 export class GameScene extends Container implements IScene {
   /** Pausar solo al perder el foco de la ventana (se desactiva en la demo). */
   public static autoPause = true;
+  /** Tutorial del Mundo 1 la primera vez (la demo lo apaga). */
+  public static tutorialEnabled = true;
   /** Para pruebas locales: el jugador no recibe daño. */
   public godMode = false;
 
@@ -151,6 +154,9 @@ export class GameScene extends Container implements IScene {
   private powerCd = 0;
   /** Segundos de TURBO que quedan (astronauta). */
   private turboT = 0;
+  private tutorial: Tutorial | null = null;
+  private tutDino: Enemy | null = null;
+  private movedDist = 0;
   private readonly offAch: () => void;
 
   constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState) {
@@ -198,7 +204,11 @@ export class GameScene extends Container implements IScene {
     } else {
       Storage.saveRun(null); // partida nueva: se descarta la que había para continuar
       this.hud.showBanner(`MUNDO 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
-      this.hud.showHint(`Juntá ${COINS_PER_WORLD} monedas en cada mundo para abrir el PORTAL · al final te espera el jefe\nSaltá ENCIMA de los monstruos para aplastarlos · ¡Esquivá rocas, fuego y medusas!`, 7);
+      if (GameScene.tutorialEnabled && !Storage.tutorialDone) {
+        this.startTutorial();
+      } else {
+        this.hud.showHint(`Juntá ${COINS_PER_WORLD} monedas: aparece el JEFE · vencelo y entrá al PORTAL`, 5);
+      }
       AudioCtl.music(`world${this.level}`);
     }
     this.refreshArsenal();
@@ -238,6 +248,36 @@ export class GameScene extends Container implements IScene {
     }
   }
 
+  // ------------------------------------------------------------------ tutorial
+
+  private startTutorial(): void {
+    const tut = new Tutorial(
+      {
+        spawnDino: () => {
+          const d = new DinoSkater(190);
+          this.addEnemy(d);
+          this.tutDino = d;
+        },
+        spawnCoins: () => this.debugCoinRow(8),
+        dinoAlive: () => !!this.tutDino && !this.tutDino.destroyed && !this.tutDino.dead && this.tutDino.x > -60,
+        finished: () => {
+          Storage.setTutorialDone(true);
+          this.hud.showBanner("¡LISTO!", `¡A jugar! Juntá ${COINS_PER_WORLD} monedas y vencé al jefe`, 2.2);
+          this.enemyTimer = 1.5;
+          this.coinTimer = 0.4;
+        },
+      },
+      TouchControls.isTouchDevice(),
+    );
+    this.tutorial = tut;
+    this.world.addChildAt(tut, this.world.getChildIndex(this.entities)); // detrás del jugador
+  }
+
+  /** El tutorial todavía corre. */
+  private get inTutorial(): boolean {
+    return !!this.tutorial && !this.tutorial.finishedAll;
+  }
+
   private refreshArsenal(): void {
     if (this.wallet >= 150) {
       Achievements.unlock("ahorro");
@@ -266,6 +306,8 @@ export class GameScene extends Container implements IScene {
       }
     } else if (POWER_KEYS.includes(code) && this.state === "playing") {
       this.usePower();
+    } else if ((code === "Enter" || code === "NumpadEnter") && this.inTutorial && this.state === "playing") {
+      this.tutorial?.skip();
     } else if (code === "KeyP" || code === "Escape") {
       this.togglePause();
     }
@@ -329,7 +371,19 @@ export class GameScene extends Container implements IScene {
 
     const worldSpeed = BASE_WORLD_SPEED * this.speedMul * (this.boss ? 0.5 : 1);
     this.bg.update(dt, worldSpeed);
+    const px0 = this.player.x;
     this.player.update(dt);
+    if (this.tutorial) {
+      this.movedDist += Math.abs(this.player.x - px0);
+      if (this.movedDist > 160) {
+        this.tutorial.event("move");
+      }
+      this.tutorial.update(dt, worldSpeed);
+      if (this.tutorial.finishedAll && this.tutorial.children.length <= 1) {
+        this.tutorial.destroy({ children: true });
+        this.tutorial = null;
+      }
+    }
     if (this.player.gliding) {
       this.fx.burst(this.player.x, this.player.y - 40, { count: 2, colors: [0xff6d00, 0xffd54f, 0xffffff], speed: 120, life: 0.35, gravity: 600, size: 0.9 });
     }
@@ -411,7 +465,7 @@ export class GameScene extends Container implements IScene {
       this.spawnPowerUp();
       this.powerTimer = this.boss ? rand(7, 10) : rand(13, 19);
     }
-    if (this.boss || this.portal || this.coinsCollected >= COINS_PER_WORLD) {
+    if (this.boss || this.portal || this.coinsCollected >= COINS_PER_WORLD || this.inTutorial) {
       return; // durante el jefe y con el portal abierto: sin monstruos ni monedas (sólo power-ups)
     }
     // desierto: cráneos para agarrar y lanzar
@@ -753,6 +807,7 @@ export class GameScene extends Container implements IScene {
     }
     const pw = this.def.power;
     this.powerCd = pw.cooldown;
+    this.tutorial?.event("power");
     const p = this.player;
     const dir = p.dir;
     const cy = p.y - this.def.height / 2;
@@ -1004,6 +1059,7 @@ export class GameScene extends Container implements IScene {
   // ------------------------------------------------------------------ eventos
 
   private onPlayerJump(air: boolean): void {
+    this.tutorial?.event(air ? "airJump" : "jump");
     if (air) {
       Sfx.airJump();
       this.fx.burst(this.player.x, this.player.y, { count: 10, colors: [0xffffff, this.def.accent], speed: 260, life: 0.4, gravity: 300 });
@@ -1015,6 +1071,7 @@ export class GameScene extends Container implements IScene {
 
   private stomp(e: Enemy): void {
     e.kill();
+    this.tutorial?.event("stomp");
     Achievements.add("stomps");
     this.player.bounce();
     this.stomps++;
@@ -1032,6 +1089,15 @@ export class GameScene extends Container implements IScene {
     }
     const px = this.player.x;
     const py = this.player.y - this.def.height / 2;
+    if (this.inTutorial) {
+      // practicando: sólo un empujón, sin perder vidas
+      Sfx.hurt();
+      this.player.makeInvulnerable(1);
+      this.player.vy = -650;
+      this.player.vx = fromX >= this.player.x ? -650 : 650;
+      this.fx.floatText(px, py - 120, "¡CAELE ENCIMA!", "#ffe082", 40);
+      return;
+    }
     if (this.player.hasShield) {
       this.shieldT = 0;
       this.player.setShield(false);
@@ -1086,6 +1152,7 @@ export class GameScene extends Container implements IScene {
     this.coinsCollected += 1;
     this.totalCoins += 1;
     this.wallet += 1;
+    this.tutorial?.event("coin");
     Achievements.add("coins");
     this.refreshArsenal();
     this.addScore(10 * (x2 ? 2 : 1));

@@ -33,9 +33,11 @@ interface SaveData {
   achievements: string[];
   /** Contadores acumulados para los logros (monstruos aplastados, cráneos, etc.). */
   counters: Record<string, number>;
+  /** Ya hizo el tutorial del Mundo 1. */
+  tutorialDone: boolean;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {} };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {}, tutorialDone: false };
 
 function read(): SaveData {
   try {
@@ -128,6 +130,12 @@ export const Storage = {
     const v = (counters[key] ?? 0) + n;
     write({ counters: { ...counters, [key]: v } });
     return v;
+  },
+  get tutorialDone(): boolean {
+    return read().tutorialDone;
+  },
+  setTutorialDone(v: boolean): void {
+    write({ tutorialDone: v });
   },
   get character(): string {
     return read().character;

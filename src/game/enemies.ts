@@ -68,10 +68,12 @@ export class DinoSkater extends Enemy {
   public override readonly stompable = true;
   public override readonly label = "dino";
   private readonly spr: AnimatedSprite;
-  private readonly speed = rand(250, 330);
+  private readonly speed: number;
 
-  constructor() {
+  /** speed: el tutorial usa uno lento. */
+  constructor(speed = rand(250, 330)) {
     super();
+    this.speed = speed;
     this.spr = new AnimatedSprite([Texture.from("dino1"), Texture.from("dino2")], false);
     this.spr.anchor.set(0.5, 1);
     this.spr.scale.set(-0.7, 0.7);

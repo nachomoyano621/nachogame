@@ -383,6 +383,7 @@ async function fightBoss(s: GS, hp: number): Promise<void> {
 
 export async function runDemo(app: Application, record: boolean): Promise<void> {
   GameScene.autoPause = false;
+  GameScene.tutorialEnabled = false;
   const pilot = new AutoPilot();
   app.ticker.add(() => pilot.step(Math.min(app.ticker.deltaMS, 50) / 1000));
 
