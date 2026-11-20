@@ -126,21 +126,24 @@ export interface BossConfig {
   babies?: (x: number) => Enemy;
   /** Jefe final del juego (al vencerlo se gana). */
   final?: boolean;
+  /** Rugido propio (ver Sfx.bossVoice). */
+  voice: string;
 }
 
 /** Jefes de cada mundo (índice = mundo - 1) y el jefe final. */
 export const WORLD_BOSSES: BossConfig[] = [
-  { name: "REY DINO PATINADOR", intro: "¡El rey del valle quiere sus monedas!", frames: () => [Texture.from("dino1"), Texture.from("dino2")], facesRight: true, scale: 1.75, hpMul: 0.5, color: 0xffd600, shot: SHOTS.rock, anim: 0.12 },
-  { name: "ESCORPIÓN GIGANTE", intro: "¡Cuidado con sus aguijones!", frames: () => WArt.scorpion, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xe040fb, shot: SHOTS.stinger, hue: -25, anim: 0.12 },
-  { name: "CANGREJO GIGANTE", intro: "¡Tira burbujas y pellizca fuerte!", frames: () => WArt.crab, facesRight: false, scale: 3, hpMul: 0.5, color: 0x4fc3f7, shot: SHOTS.bubble, anim: 0.15 },
-  { name: "SERPIENTE GIGANTE", intro: "¡Escupe veneno! No te quedes quieto", frames: () => WArt.snake, facesRight: false, scale: 3.1, hpMul: 0.5, color: 0x76ff03, shot: SHOTS.venom, anim: 0.1 },
-  { name: "SALAMANDRA DE MAGMA", intro: "¡Lanza bolas de fuego!", frames: () => WArt.salamander, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff6d00, shot: SHOTS.fire, hue: -15, anim: 0.15 },
-  { name: "MARCIANO MALO GIGANTE", intro: "¡Dispara rayos láser y larga marcianitos!", frames: () => WArt.alien, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff4081, shot: SHOTS.laser, hue: 150, anim: 0.12, babies: (x) => BOSS_BABIES.alien(x) },
-  { name: "GIGANTE DE BLOQUES", intro: "¡Te tira ladrillos de juguete!", frames: () => WArt.brickGolem, facesRight: false, scale: 1.7, hpMul: 0.5, color: 0xfdd835, shot: SHOTS.brick, anim: 0.1 },
+  { name: "REY DINO PATINADOR", voice: "rey", intro: "¡El rey del valle quiere sus monedas!", frames: () => [Texture.from("dino1"), Texture.from("dino2")], facesRight: true, scale: 1.75, hpMul: 0.5, color: 0xffd600, shot: SHOTS.rock, anim: 0.12 },
+  { name: "ESCORPIÓN GIGANTE", voice: "escorpion", intro: "¡Cuidado con sus aguijones!", frames: () => WArt.scorpion, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xe040fb, shot: SHOTS.stinger, hue: -25, anim: 0.12 },
+  { name: "CANGREJO GIGANTE", voice: "cangrejo", intro: "¡Tira burbujas y pellizca fuerte!", frames: () => WArt.crab, facesRight: false, scale: 3, hpMul: 0.5, color: 0x4fc3f7, shot: SHOTS.bubble, anim: 0.15 },
+  { name: "SERPIENTE GIGANTE", voice: "serpiente", intro: "¡Escupe veneno! No te quedes quieto", frames: () => WArt.snake, facesRight: false, scale: 3.1, hpMul: 0.5, color: 0x76ff03, shot: SHOTS.venom, anim: 0.1 },
+  { name: "SALAMANDRA DE MAGMA", voice: "salamandra", intro: "¡Lanza bolas de fuego!", frames: () => WArt.salamander, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff6d00, shot: SHOTS.fire, hue: -15, anim: 0.15 },
+  { name: "MARCIANO MALO GIGANTE", voice: "marciano", intro: "¡Dispara rayos láser y larga marcianitos!", frames: () => WArt.alien, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff4081, shot: SHOTS.laser, hue: 150, anim: 0.12, babies: (x) => BOSS_BABIES.alien(x) },
+  { name: "GIGANTE DE BLOQUES", voice: "bloques", intro: "¡Te tira ladrillos de juguete!", frames: () => WArt.brickGolem, facesRight: false, scale: 1.7, hpMul: 0.5, color: 0xfdd835, shot: SHOTS.brick, anim: 0.1 },
 ];
 
 export const FINAL_BOSS: BossConfig = {
   name: "DINO-X · EXPERIMENTO DEL LABORATORIO",
+  voice: "dinox",
   intro: "El DINO-X se escapó del laboratorio ¡con sus bebés! Derrotalo",
   babies: (x) => BOSS_BABIES.dino(x),
   frames: () => [Texture.from("myDino")],
@@ -336,10 +339,11 @@ export class Boss extends Container {
     if (this.hp <= 0) {
       this.state = "dying";
       this.timer = this.cfg.final ? 2.6 : 1.8;
-      Sfx.roar();
+      Sfx.bossVoice(this.cfg.voice);
     } else {
       this.state = "hurt";
       this.timer = 0.8;
+      Sfx.bossVoice(this.cfg.voice, true);
     }
     this.emit("hit");
   }
@@ -375,7 +379,7 @@ export class Boss extends Container {
       this.state = "summon";
       this.timer = 0.7;
       this.spitLeft = this.enraged ? 3 : 2;
-      Sfx.roar();
+      Sfx.bossVoice(this.cfg.voice);
       this.emit("summon");
     } else if (a === "spit") {
       this.state = "spitWind";
@@ -383,7 +387,7 @@ export class Boss extends Container {
     } else if (a === "charge") {
       this.state = "chargeWarn";
       this.timer = 0.9 / this.spd;
-      Sfx.roar();
+      Sfx.bossVoice(this.cfg.voice);
     } else {
       this.state = "jump";
       this.vy = -1250;

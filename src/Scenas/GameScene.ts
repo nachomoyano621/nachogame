@@ -502,6 +502,9 @@ export class GameScene extends Container implements IScene {
   private addEnemy(e: Enemy): void {
     this.enemies.push(e);
     this.entities.addChildAt(e, 0);
+    if (!(e instanceof AcidBall)) {
+      Sfx.voice(e.label);
+    }
   }
 
   /** Cada mundo tiene sus propios monstruos. */
@@ -956,8 +959,9 @@ export class GameScene extends Container implements IScene {
   }
 
   /** Enemigo volteado por una bala o la explosión. */
-  private shootDown(e: { x: number; y: number; points: number; kill: () => void }, word: string): void {
+  private shootDown(e: { x: number; y: number; points: number; label: string; kill: () => void }, word: string): void {
     e.kill();
+    Sfx.voice(e.label, true);
     Achievements.add("shotKills");
     this.stomps++;
     const pts = e.points * this.level;
@@ -1077,6 +1081,7 @@ export class GameScene extends Container implements IScene {
 
   private stomp(e: Enemy): void {
     e.kill();
+    Sfx.voice(e.label, true);
     this.tutorial?.event("stomp");
     Achievements.add("stomps");
     this.player.bounce();
@@ -1309,7 +1314,7 @@ export class GameScene extends Container implements IScene {
       this.alarmT = 2.6;
       this.hud.showBanner("¡ALERTA!", cfg.intro, 3);
     } else {
-      Sfx.roar();
+      Sfx.bossVoice(cfg.voice);
       this.shake(14, 0.5);
       this.hud.showBanner("¡JEFE DEL MUNDO!", `${cfg.name} · ${cfg.intro}`, 3);
     }
