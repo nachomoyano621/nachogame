@@ -349,7 +349,8 @@ export class GameScene extends Container implements IScene {
   // ------------------------------------------------------------------ loop
 
   private get speedMul(): number {
-    return (1 + 0.13 * (this.level - 1)) * this.diff.speed;
+    // medido con el piloto: con +13% por mundo el 6 y el 7 eran 20-40 veces más difíciles que el 1
+    return (1 + 0.08 * (this.level - 1)) * this.diff.speed;
   }
 
   public update(dtMS: number): void {
@@ -479,7 +480,7 @@ export class GameScene extends Container implements IScene {
     this.enemyTimer -= dt;
     if (this.enemyTimer <= 0) {
       this.spawnEnemy();
-      this.enemyTimer = (rand(1.5, 2.7) / (1 + 0.12 * (this.level - 1))) * this.diff.spawn;
+      this.enemyTimer = (rand(1.5, 2.7) / (1 + 0.08 * (this.level - 1))) * this.diff.spawn;
     }
     this.coinTimer -= dt;
     if (this.coinTimer <= 0) {
@@ -492,7 +493,8 @@ export class GameScene extends Container implements IScene {
       this.meteorTimer -= dt;
       if (this.meteorTimer <= 0) {
         this.spawnMeteors();
-        this.meteorTimer = (rand(3.5, 6) / this.speedMul) * this.diff.spawn;
+        // medido: dividir por toda la velocidad del mundo hacía del Mundo 6 una trampa (lluvia cada 2 s)
+        this.meteorTimer = (rand(4.5, 7) / Math.sqrt(this.speedMul)) * this.diff.spawn;
       }
     }
   }
@@ -530,7 +532,7 @@ export class GameScene extends Container implements IScene {
         pool.push([W.alien, 3], [W.ufo, 2.2]);
         break;
       default: // Mundo de bloques
-        pool.push([W.bricky, 3], [W.copter, 2.2]);
+        pool.push([W.bricky, 3], [W.copter, 1.5]); // medido: el helibloque era la causa n°1 de vidas perdidas en el Mundo 7
         break;
     }
 
@@ -547,10 +549,14 @@ export class GameScene extends Container implements IScene {
 
   /** Lluvia de meteoritos: caen adelante del jugador (la sombra viene hacia él con el piso). */
   private spawnMeteors(): void {
-    const count = this.level >= 5 && Math.random() < 0.35 ? 3 : this.level >= 3 && Math.random() < 0.3 ? 2 : 1;
+    // tandas de 3 sólo en DIFÍCIL; en FÁCIL de a uno
+    const hard = this.diff.id === "dificil";
+    const count = this.diff.id === "facil" ? 1 : hard && Math.random() < 0.3 ? 3 : Math.random() < (hard ? 0.3 : 0.2) ? 2 : 1;
     for (let i = 0; i < count; i++) {
-      const x = Math.min(WIDTH - 60, this.player.x + rand(250, 900) + i * 320);
-      this.addEnemy(this.level === 7 ? new Meteor(x, WArt.brickShot, "ladrillazo") : new Meteor(x));
+      // cae cerca del jugador (adelante o un poco atrás); la sombra avisa dónde
+      const x = Math.max(80, Math.min(WIDTH - 80, this.player.x + rand(-150, 450) + i * 330));
+      const warn = this.diff.id === "facil" ? 1.5 : 1.1;
+      this.addEnemy(this.level === 7 ? new Meteor(x, WArt.brickShot, "ladrillazo", warn) : new Meteor(x, undefined, undefined, warn));
     }
   }
 

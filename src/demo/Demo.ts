@@ -200,7 +200,7 @@ class AutoPilot {
     this.cooldown -= dt;
     if (this.holdT > 0) {
       this.holdT -= dt;
-      if (this.holdT <= 0 && !(p.def.glide && !p.onGround && p.vy > 0)) {
+      if (this.holdT <= 0 && !(p.def.glide && !p.onGround && p.vy > 0 && !(s.boss && s.boss.stunned))) {
         Keyboard.release(JUMP);
       }
     }
@@ -215,7 +215,7 @@ class AutoPilot {
         this.pressJump(0.3);
       }
     }
-    if (p.def.glide && !p.onGround && p.vy > 0 && wantJump) {
+    if (p.def.glide && !p.onGround && p.vy > 0 && wantJump && !(s.boss && s.boss.stunned)) {
       Keyboard.press(JUMP); // planear
     }
   }
@@ -566,4 +566,9 @@ function startRecording(app: Application): () => Promise<void> {
       rec.onstop = () => void pending.then(() => res());
       rec.stop();
     });
+}
+
+/** Para medir el balance en local: un piloto suelto (sin el guion de la demo). */
+export function createPilot(): { step(dt: number): void; enabled: boolean; keepAlive: boolean } {
+  return new AutoPilot();
 }

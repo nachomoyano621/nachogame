@@ -248,6 +248,6 @@ export const WORLD_ENEMIES = {
   lava: (x: number): Enemy => new LavaBall(x),
   alien: (): Enemy => new Walker({ label: "alien", frames: WArt.alien, scale: 0.95, speed: [250, 320], hit: { w: 70, h: 125 }, stompable: true, anim: 0.15, hop: true }),
   bricky: (): Enemy => new Walker({ label: "bloquecito", frames: WArt.brickMonster, scale: 0.95, speed: [270, 350], hit: { w: 100, h: 96 }, stompable: true, anim: 0.18, hop: true }),
-  copter: (): Enemy => new Flyer({ label: "helibloque", frames: WArt.brickCopter, scale: 0.9, speed: [260, 330], baseY: [640, 800], amp: 70, freq: 2, hit: { w: 110, h: 60 }, stompable: true, anim: 0.4 }),
-  ufo: (): Enemy => new Flyer({ label: "ovni", frames: WArt.ufo, scale: 0.9, speed: [260, 320], baseY: [640, 780], amp: 90, freq: 1.6, hit: { w: 140, h: 60 }, stompable: true, anim: 0.12 }),
+  copter: (): Enemy => new Flyer({ label: "helibloque", frames: WArt.brickCopter, scale: 0.9, speed: [260, 330], baseY: [620, 750], amp: 45, freq: 2, hit: { w: 110, h: 60 }, stompable: true, anim: 0.4 }),
+  ufo: (): Enemy => new Flyer({ label: "ovni", frames: WArt.ufo, scale: 0.9, speed: [260, 320], baseY: [610, 740], amp: 55, freq: 1.6, hit: { w: 140, h: 60 }, stompable: true, anim: 0.12 }),
 };

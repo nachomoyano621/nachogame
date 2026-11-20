@@ -164,6 +164,8 @@ export class Boss extends Container {
   public readonly maxHp: number;
   public hp: number;
   public done = false;
+  /** Cuánto se agacha al quedar mareado (fracción de su alto). */
+  private static readonly SAG = 0.3;
   public readonly cfg: BossConfig;
 
   private state: BossState = "enter";
@@ -317,7 +319,8 @@ export class Boss extends Container {
   /** Zona de la cabeza/lomo donde se lo aplasta (franja de arriba). */
   public weakBox(): Rectangle {
     const h = Math.max(100, this.dh * 0.35);
-    const top = this.y - this.dh - 20 + (this.stunned ? 30 : 0);
+    // mareado se agacha: medido, sin esto el robot (salto más bajo) no llegaba a la cabeza de los jefes grandes
+    const top = this.y - this.dh - 20 + (this.stunned ? Math.max(30, this.dh * Boss.SAG) : 0);
     return new Rectangle(this.x - this.dw * 0.45, top, this.dw * 0.9, h);
   }
 
@@ -326,6 +329,7 @@ export class Boss extends Container {
   }
 
   public hit(): void {
+    this.body.scale.y = this.S;
     this.hp--;
     this.flashT = 0.5;
     this.stars.visible = false;
@@ -489,7 +493,9 @@ export class Boss extends Container {
         break;
       case "stunned": {
         this.body.rotation = -0.1 + Math.sin(this.t * 5) * 0.03;
-        this.stars.position.set(-this.dw * 0.25, -this.dh - 10);
+        // agachado y aplastado mientras está mareado
+        this.body.scale.y += (this.S * (1 - Boss.SAG) - this.body.scale.y) * Math.min(1, dt * 12);
+        this.stars.position.set(-this.dw * 0.25, -this.dh * (1 - Boss.SAG) - 10);
         this.stars.children.forEach((st, i) => {
           const a = this.t * 4 + (i * Math.PI * 2) / 3;
           st.position.set(Math.cos(a) * 70, Math.sin(a) * 18);
@@ -497,6 +503,7 @@ export class Boss extends Container {
         });
         if (this.timer <= 0) {
           this.stars.visible = false;
+          this.body.scale.y = this.S;
           this.startReturn();
         }
         break;

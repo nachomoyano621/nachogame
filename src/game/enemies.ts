@@ -1,6 +1,6 @@
 import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
-import { BASE_WORLD_SPEED, GROUND_Y, HEIGHT, WIDTH, rand } from "../config";
+import { GROUND_Y, HEIGHT, WIDTH, rand } from "../config";
 import { Sfx } from "../core/Sfx";
 import { style } from "../ui/styles";
 import { BurstOpts } from "./Effects";
@@ -336,14 +336,17 @@ export class Meteor extends Enemy {
   private readonly marker = new Graphics();
   private readonly rock: Sprite;
   private state: "warn" | "fall" | "boom" = "warn";
-  private timer = Meteor.WARN;
+  private timer: number;
+  private readonly warn: number;
   private readonly startDx = rand(380, 620);
   private readonly startDy = -1150;
 
   /** `tex`/`label` permiten reusarlo (ej: lluvia de ladrillos en el mundo de bloques). */
-  constructor(x: number, tex: Texture = Art.meteor, label = "meteorito") {
+  constructor(x: number, tex: Texture = Art.meteor, label = "meteorito", warn = Meteor.WARN) {
     super();
     this.label = label;
+    this.warn = warn;
+    this.timer = warn;
     this.position.set(x, GROUND_Y);
     this.marker.beginFill(0xff1744, 0.45);
     this.marker.drawEllipse(0, 0, 80, 18);
@@ -361,11 +364,10 @@ export class Meteor extends Enemy {
   }
 
   protected override tick(dt: number, ctx: EnemyCtx): void {
-    // el punto de impacto viaja con el piso
-    this.x -= BASE_WORLD_SPEED * ctx.speedMul * dt;
+    // la sombra queda fija donde va a caer (antes se deslizaba con el piso y era un blanco móvil imposible)
     this.timer -= dt;
     if (this.state === "warn") {
-      const k = 1 - Math.max(0, this.timer) / Meteor.WARN;
+      const k = 1 - Math.max(0, this.timer) / this.warn;
       this.marker.scale.set(0.35 + k * 0.65);
       this.marker.alpha = 0.5 + Math.sin(this.t * 18) * 0.5;
       if (this.timer <= 0) {

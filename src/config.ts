@@ -46,7 +46,7 @@ export interface Difficulty {
 export const DIFFICULTIES: Difficulty[] = [
   { id: "facil", name: "FÁCIL", color: 0x66bb6a, desc: "+2 vidas · enemigos lentos", speed: 0.85, spawn: 1.45, extraLives: 2, bossHp: 4, invuln: 2.2, scoreMul: 1 },
   { id: "medio", name: "MEDIO", color: 0xffb300, desc: "El desafío normal", speed: 1, spawn: 1, extraLives: 0, bossHp: 6, invuln: 1.7, scoreMul: 1.5 },
-  { id: "dificil", name: "DIFÍCIL", color: 0xff1744, desc: "-1 vida · todo más rápido", speed: 1.2, spawn: 0.72, extraLives: -1, bossHp: 8, invuln: 1.25, scoreMul: 2.5 },
+  { id: "dificil", name: "DIFÍCIL", color: 0xff1744, desc: "-1 vida · todo más rápido", speed: 1.1, spawn: 0.85, extraLives: -1, bossHp: 8, invuln: 1.45, scoreMul: 2.5 },
 ];
 
 export function getDifficulty(id: string): Difficulty {

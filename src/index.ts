@@ -6,13 +6,15 @@ import { Art, buildArt } from "./art/ProceduralArt";
 import { WArt, buildWorldArt } from "./art/WorldArt";
 import { buildWeaponArt } from "./art/WeaponArt";
 import { WORLD_ENEMIES } from "./game/worldEnemies";
-import { HEIGHT, WIDTH } from "./config";
+import { HEIGHT, WIDTH, getDifficulty } from "./config";
 import { AudioCtl } from "./core/AudioCtl";
 import { Music } from "./core/Music";
 import { Sfx } from "./core/Sfx";
 import { SceneManager } from "./core/SceneManager";
 import { TitleScene } from "./Scenas/TitleScene";
-import { runDemo } from "./demo/Demo";
+import { createPilot, runDemo } from "./demo/Demo";
+import { GameScene } from "./Scenas/GameScene";
+import { getCharacter } from "./game/characters";
 import { style } from "./ui/styles";
 import { Keyboard } from "./utils/Keyboard";
 
@@ -92,5 +94,5 @@ Keyboard.down.on("KeyM", () => AudioCtl.toggle());
 // Acceso para pruebas en local (no se incluye en el build de producción)
 declare const process: { env: { NODE_ENV?: string } };
 if (process.env.NODE_ENV !== "production") {
-  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES, Music };
+  (window as unknown as { __tomi: unknown }).__tomi = { app, SceneManager, Keyboard, Art, PIXI, WArt, WORLD_ENEMIES, Music, createPilot, GameScene, getCharacter, getDifficulty };
 }
