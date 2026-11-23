@@ -1,4 +1,4 @@
-import { Container, Sprite, Text } from "pixi.js";
+import { Container, Sprite, Text, Texture } from "pixi.js";
 import { Art } from "../art/ProceduralArt";
 import { style } from "../ui/styles";
 
@@ -25,6 +25,8 @@ export interface BurstOpts {
   gravity?: number;
   size?: number;
   up?: number;
+  /** Forma de la partícula (por defecto, un círculo). */
+  tex?: Texture;
 }
 
 /** Partículas y textos flotantes ("+10", "¡PLAF!", etc). */
@@ -40,7 +42,7 @@ export class Effects extends Container {
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const v = speed * (0.35 + Math.random() * 0.65);
-      const spr = new Sprite(Art.particle);
+      const spr = new Sprite(o.tex ?? Art.particle);
       spr.anchor.set(0.5);
       spr.tint = colors[i % colors.length];
       spr.scale.set(size * (0.5 + Math.random() * 0.7));

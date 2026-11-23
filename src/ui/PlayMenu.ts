@@ -225,6 +225,10 @@ export class PlayMenu extends Container {
   }
 
   private onKey(code: string): void {
+    if (this.destroyed) {
+      Keyboard.down.off("key", this.onKey, this); // la pantalla de atrás se fue con esta ventana abierta
+      return;
+    }
     if (this.ready > 0 || this.closed) return;
     if (code === "ArrowLeft") {
       this.mode = MODES[(MODES.indexOf(this.mode) + MODES.length - 1) % MODES.length];

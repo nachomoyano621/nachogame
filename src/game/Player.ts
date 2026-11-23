@@ -41,6 +41,9 @@ export class Player extends Container {
   /** Arma en la mano (se da vuelta según hacia dónde mira). */
   private readonly gun = new Sprite(Texture.EMPTY);
   private gunKick = 0;
+  /** Sombrero del ropero. */
+  private readonly hat = new Sprite(Texture.EMPTY);
+  private hatHead = { y: 0.95, x: 0, scale: 0.85 };
 
   constructor(public readonly def: CharacterDef) {
     super();
@@ -52,6 +55,8 @@ export class Player extends Container {
     this.sprite.animationSpeed = 0.2;
     this.sprite.play();
     this.addChild(this.sprite);
+    this.hat.visible = false;
+    this.addChild(this.hat);
 
     // burbuja del escudo rojinegro
     this.shieldG.lineStyle(6, 0xff1744, 0.9);
@@ -94,6 +99,14 @@ export class Player extends Container {
     this.gun.visible = tex !== null;
     const k = tex ? Math.min(0.7, (this.def.height * 0.55) / tex.width) : 1;
     this.gun.scale.set(k);
+  }
+
+/** Pone (o saca) el sombrero del ropero. `head`: dónde está la cabeza de este personaje. */
+  public setHat(tex: Texture | null, anchor: [number, number] = [0.5, 1], head = this.hatHead): void {
+    this.hat.texture = tex ?? Texture.EMPTY;
+    this.hat.anchor.set(anchor[0], anchor[1]);
+    this.hat.visible = tex !== null;
+    this.hatHead = head;
   }
 
   /** De dónde salen las balas (punta del arma). */
@@ -259,6 +272,15 @@ export class Player extends Container {
       this.sprite.alpha = Math.floor(this.t * 18) % 2 === 0 ? 0.25 : 1;
     } else {
       this.sprite.alpha = 1;
+    }
+
+    if (this.hat.visible) {
+      // apoyado en la cabeza: sigue el aplastado, el giro y hacia dónde mira
+      const h = this.def.height;
+      const k = (h * 0.42 * this.hatHead.scale) / 90;
+      this.hat.scale.set(this.facing * k * (2 - this.squash), k * this.squash);
+      this.hat.position.set(this.facing * this.hatHead.x * h, -this.hatHead.y * h * this.squash);
+      this.hat.alpha = this.sprite.alpha;
     }
 
     if (this.gun.visible) {

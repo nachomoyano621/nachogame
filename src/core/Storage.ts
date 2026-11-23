@@ -37,9 +37,14 @@ interface SaveData {
   tutorialDone: boolean;
   /** Mundo más lejano al que llegó (8 = laboratorio): habilita el selector de mundo. */
   maxWorld: number;
+  /** Ropero: lo comprado, lo equipado y las monedas ya gastadas. */
+  owned: string[];
+  hat: string | null;
+  trail: string | null;
+  spent: number;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {}, tutorialDone: false, maxWorld: 1 };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {}, tutorialDone: false, maxWorld: 1, owned: [], hat: null, trail: null, spent: 0 };
 
 function read(): SaveData {
   try {
@@ -146,6 +151,31 @@ export const Storage = {
     if (n > read().maxWorld) {
       write({ maxWorld: n });
     }
+  },
+  get owned(): string[] {
+    return read().owned;
+  },
+  get spent(): number {
+    return read().spent;
+  },
+  /** Compra (descuenta del ropero). */
+  buyCosmetic(id: string, price: number): void {
+    const d = read();
+    if (!d.owned.includes(id)) {
+      write({ owned: [...d.owned, id], spent: d.spent + price });
+    }
+  },
+  get hat(): string | null {
+    return read().hat;
+  },
+  setHat(id: string | null): void {
+    write({ hat: id });
+  },
+  get trail(): string | null {
+    return read().trail;
+  },
+  setTrail(id: string | null): void {
+    write({ trail: id });
   },
   get character(): string {
     return read().character;

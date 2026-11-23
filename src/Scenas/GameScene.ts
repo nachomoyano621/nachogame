@@ -32,6 +32,7 @@ import { WArt } from "../art/WorldArt";
 import { Player } from "../game/Player";
 import { Tutorial } from "../game/Tutorial";
 import { Ghost } from "../game/Ghost";
+import { HEAD, TrailDef, equippedHat, equippedTrail } from "../game/cosmetics";
 import { DEFAULT_OPTIONS, DailyRule, ENDLESS_WORLD_TIME, GameOptions, dailyRule, modeBestKey } from "../game/modes";
 import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
@@ -162,6 +163,9 @@ export class GameScene extends Container implements IScene {
   private laps = 0;
   /** Regla del DESAFÍO DEL DÍA (null en los otros modos). */
   private rule: DailyRule | null = null;
+  /** Estela del ropero. */
+  private trail: TrailDef | null = null;
+  private trailHue = 0;
   /** Recarga del poder especial (0 = listo). */
   private powerCd = 0;
   /** Segundos de TURBO que quedan (astronauta). */
@@ -184,6 +188,13 @@ export class GameScene extends Container implements IScene {
     this.entities.addChild(this.player);
     this.player.on("jump", (air: boolean) => this.onPlayerJump(air));
     this.player.on("land", () => this.fx.burst(this.player.x, GROUND_Y - 4, { count: 6, colors: [0xa1887f], speed: 160, life: 0.35, gravity: 600, up: 120, size: 0.8 }));
+
+    // ropa del ropero
+    const hat = equippedHat();
+    if (hat) {
+      this.player.setHat(hat.tex(), hat.anchor, HEAD[def.id]);
+    }
+    this.trail = equippedTrail();
 
     if (def.startShield) {
       this.shieldT = SHIELD_TIME;
@@ -490,6 +501,12 @@ export class GameScene extends Container implements IScene {
         this.tutorial.destroy({ children: true });
         this.tutorial = null;
       }
+    }
+    if (this.trail && this.state === "playing" && (Math.abs(this.player.vx) > 60 || !this.player.onGround) && Math.random() < 0.55) {
+      const t = this.trail;
+      const p = this.player;
+      const color = t.id === "arcoiris" ? t.colors[this.trailHue++ % t.colors.length] : t.colors[Math.floor(Math.random() * t.colors.length)];
+      this.fx.burst(p.x - p.dir * 24, p.y - this.def.height * (0.25 + Math.random() * 0.35), { count: 1, colors: [color], speed: 50, life: 0.7, gravity: t.rise ? -260 : 120, size: t.id === "arcoiris" ? 1.2 : 1, tex: t.tex() });
     }
     if (this.player.gliding) {
       this.fx.burst(this.player.x, this.player.y - 40, { count: 2, colors: [0xff6d00, 0xffd54f, 0xffffff], speed: 120, life: 0.35, gravity: 600, size: 0.9 });

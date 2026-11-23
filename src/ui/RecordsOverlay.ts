@@ -283,6 +283,10 @@ export class RecordsOverlay extends Container {
   // ------------------------------------------------------------ input / ciclo
 
   private onKey(code: string): void {
+    if (this.destroyed) {
+      Keyboard.down.off("key", this.onKey, this); // la pantalla de atrás se fue con esta ventana abierta
+      return;
+    }
     if (this.ready > 0 || this.closed) {
       return;
     }

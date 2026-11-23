@@ -10,6 +10,8 @@ import { TextButton } from "../ui/Button";
 import { RecordsOverlay } from "../ui/RecordsOverlay";
 import { AchievementsOverlay } from "../ui/AchievementsOverlay";
 import { PlayMenu } from "../ui/PlayMenu";
+import { Wardrobe } from "../ui/Wardrobe";
+import { bank } from "../game/cosmetics";
 import { GameOptions } from "../game/modes";
 import { ACHIEVEMENTS, Achievements } from "../core/Achievements";
 import { style } from "../ui/styles";
@@ -201,6 +203,9 @@ export class StartScene extends Container implements IScene {
     const ach = new TextButton(`🏅 LOGROS ${Achievements.count}/${ACHIEVEMENTS.length} (L)`, () => this.openAchievements(), { width: 330, height: 60, fontSize: 24, color: 0xf9a825 });
     ach.position.set(WIDTH - 195, 190);
     this.addChild(ach);
+    const ropa = new TextButton(`👕 ROPERO · 🪙${bank()} (R)`, () => this.openWardrobe(), { width: 330, height: 60, fontSize: 24, color: 0x8e24aa });
+    ropa.position.set(190, 112);
+    this.addChild(ropa);
 
     CHARACTERS.forEach((def, i) => {
       const card = new CharacterCard(def);
@@ -272,6 +277,22 @@ export class StartScene extends Container implements IScene {
     this.addChild(this.overlay);
   }
 
+  private openWardrobe(): void {
+    if (this.overlay) {
+      return;
+    }
+    const def = CHARACTERS[this.selected];
+    // se recuerda lo elegido (al cerrar se rearma el menú con las monedas al día)
+    if (!this.cards[this.selected].locked) Storage.setCharacter(def.id);
+    Storage.setDifficulty(DIFFICULTIES[this.diffIdx].id);
+    this.overlay = new Wardrobe(this.cards[this.selected].locked ? CHARACTERS[0] : def, () => {
+      this.closeOverlay();
+      // el botón muestra las monedas que quedan
+      SceneManager.change(new StartScene());
+    });
+    this.addChild(this.overlay);
+  }
+
   private openAchievements(): void {
     if (this.overlay) {
       return;
@@ -288,6 +309,8 @@ export class StartScene extends Container implements IScene {
       this.openRecords();
     } else if (code === "KeyL") {
       this.openAchievements();
+    } else if (code === "KeyR") {
+      this.openWardrobe();
     } else if (code === "ArrowLeft" || code === "KeyA") {
       this.select(this.selected - 1);
     } else if (code === "ArrowRight" || code === "KeyD") {
