@@ -110,7 +110,7 @@ export class Tutorial extends Container {
 
   constructor(private readonly hooks: TutorialHooks, private readonly touch: boolean) {
     super();
-    this.skipText = new Text(touch ? "" : "ENTER: saltear tutorial", style({ fontSize: 22, strokeThickness: 4, fill: "#ffffffcc" }));
+    this.skipText = new Text("", style({ fontSize: 22, strokeThickness: 4, fill: "#ffffffcc" }));
     this.skipText.anchor.set(1, 1);
     this.skipText.position.set(WIDTH - 24, 128);
     this.addChild(this.skipText);

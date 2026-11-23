@@ -8,6 +8,7 @@ import { getCharacter, scaleFor } from "../game/characters";
 import { GameStats, START_CREDITS } from "../game/types";
 import { TextButton } from "../ui/Button";
 import { RecordGate } from "../ui/RecordsOverlay";
+import { makeShareButton } from "../ui/Share";
 import { StatsPanel } from "../ui/StatsPanel";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
@@ -28,6 +29,7 @@ export class FinalScene extends Container implements IScene {
   private readonly fx = new Effects();
   private ready = 0.6; // evita saltear la pantalla con una tecla que venía apretada
   private records!: RecordGate;
+  private share: () => void = () => undefined;
   private t = 0;
   private glitchT = 0;
 
@@ -136,6 +138,7 @@ export class FinalScene extends Container implements IScene {
     }
 
     Keyboard.down.on("key", this.onKey, this);
+    this.share = makeShareButton(this, stats, WIDTH - 190, 56);
     // TOP 5: pedir iniciales si entró (va arriba de todo)
     this.records = new RecordGate(this, stats, WIDTH / 2 + 440, 430);
   }
@@ -152,6 +155,8 @@ export class FinalScene extends Container implements IScene {
       }
     } else if (code === "KeyR") {
       this.retry();
+    } else if (code === "KeyS") {
+      this.share();
     } else if (code === "Escape") {
       this.menu();
     }

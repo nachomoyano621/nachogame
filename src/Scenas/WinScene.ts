@@ -8,6 +8,7 @@ import { getCharacter, scaleFor } from "../game/characters";
 import { GameStats } from "../game/types";
 import { TextButton } from "../ui/Button";
 import { RecordGate } from "../ui/RecordsOverlay";
+import { makeShareButton } from "../ui/Share";
 import { StatsPanel } from "../ui/StatsPanel";
 import { style } from "../ui/styles";
 import { Keyboard } from "../utils/Keyboard";
@@ -42,6 +43,7 @@ export class WinScene extends Container implements IScene {
   private readonly heroBaseScale: number;
   private ready = 0.8;
   private records!: RecordGate;
+  private share: () => void = () => undefined;
   private unlockIcon: AnimatedSprite | null = null;
   private unlockText: Text | null = null;
   private t = 0;
@@ -167,6 +169,7 @@ export class WinScene extends Container implements IScene {
     }
 
     Keyboard.down.on("key", this.onKey, this);
+    this.share = makeShareButton(this, stats, WIDTH - 190, 56);
     // TOP 5: pedir iniciales si entró (va arriba de todo)
     this.records = new RecordGate(this, stats, 1390, 320);
   }
@@ -271,6 +274,8 @@ export class WinScene extends Container implements IScene {
       this.retry();
     } else if (code === "Escape") {
       this.menu();
+    } else if (code === "KeyS") {
+      this.share();
     }
   }
 

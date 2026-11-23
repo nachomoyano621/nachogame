@@ -21,6 +21,7 @@ import { Background, LEVEL_NAMES } from "../game/Background";
 import { AcidBall, Boss, BossConfig, BossCtx, FINAL_BOSS, SHOTS, WORLD_BOSSES } from "../game/Boss";
 import { BALL, Bullet, SHURIKEN, WeaponDef, WeaponId, getWeapon } from "../game/weapons";
 import { Shop } from "../ui/Shop";
+import { TextButton } from "../ui/Button";
 import { CharacterDef, getCharacter } from "../game/characters";
 import { Effects } from "../game/Effects";
 import { Bat, Boulder, DinoSkater, Enemy, EnemyCtx, Meteor, Mosasaur, MosquitoEnemy, Rex } from "../game/enemies";
@@ -160,6 +161,7 @@ export class GameScene extends Container implements IScene {
   private turboT = 0;
   private tutorial: Tutorial | null = null;
   private tutDino: Enemy | null = null;
+  private skipBtn: TextButton | null = null;
   private movedDist = 0;
   private readonly offAch: () => void;
 
@@ -264,6 +266,7 @@ export class GameScene extends Container implements IScene {
         spawnCoins: () => this.debugCoinRow(8),
         dinoAlive: () => !!this.tutDino && !this.tutDino.destroyed && !this.tutDino.dead && this.tutDino.x > -60,
         finished: () => {
+          this.hideSkip();
           Storage.setTutorialDone(true);
           this.hud.showBanner("¡LISTO!", `¡A jugar! Juntá ${COINS_PER_WORLD} monedas y vencé al jefe`, 2.2);
           this.enemyTimer = 1.5;
@@ -274,6 +277,24 @@ export class GameScene extends Container implements IScene {
     );
     this.tutorial = tut;
     this.world.addChildAt(tut, this.world.getChildIndex(this.entities)); // detrás del jugador
+    // botón para saltearlo (mouse o dedo); ENTER también sirve
+    this.skipBtn = new TextButton("⏭ SALTEAR TUTORIAL (ENTER)", () => this.skipTutorial(), { width: 470, height: 58, fontSize: 25, color: 0x546e7a });
+    this.skipBtn.position.set(WIDTH / 2, 186);
+    this.addChildAt(this.skipBtn, this.getChildIndex(this.hud) + 1);
+  }
+
+  private skipTutorial(): void {
+    if (this.inTutorial && this.state === "playing") {
+      this.tutorial?.skip();
+    }
+    this.hideSkip();
+  }
+
+  private hideSkip(): void {
+    if (this.skipBtn) {
+      this.skipBtn.destroy({ children: true });
+      this.skipBtn = null;
+    }
   }
 
   /** El tutorial todavía corre. */
@@ -310,7 +331,7 @@ export class GameScene extends Container implements IScene {
     } else if (POWER_KEYS.includes(code) && this.state === "playing") {
       this.usePower();
     } else if ((code === "Enter" || code === "NumpadEnter") && this.inTutorial && this.state === "playing") {
-      this.tutorial?.skip();
+      this.skipTutorial();
     } else if (code === "KeyP" || code === "Escape") {
       this.togglePause();
     }
