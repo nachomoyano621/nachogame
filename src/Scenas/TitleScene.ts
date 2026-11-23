@@ -12,6 +12,8 @@ import { START_CREDITS } from "../game/types";
 import { Effects } from "../game/Effects";
 import { style } from "../ui/styles";
 import { TOUCH } from "../ui/touch";
+import { Install } from "../core/Install";
+import { TextButton } from "../ui/Button";
 import { Keyboard } from "../utils/Keyboard";
 import { GameScene } from "./GameScene";
 import { StartScene } from "./StartScene";
@@ -212,9 +214,30 @@ export class TitleScene extends Container implements IScene {
     add(WArt.alien, 115, -370);
     add(WArt.brickMonster, 95, -500);
 
+    // instalar como app (cuando el navegador lo permite)
+    this.installBtn = new TextButton("📲 INSTALAR", () => void Install.prompt(), { width: 280, height: 60, fontSize: 26, color: 0x2e7d32 });
+    this.installBtn.position.set(WIDTH - 170, 44);
+    this.installBtn.on("pointertap", (e: { stopPropagation: () => void }) => e.stopPropagation());
+    this.addChild(this.installBtn);
+    this.iosHint = new Text("📲 Instalalo: Compartir → Agregar a inicio", style({ fontSize: 22, strokeThickness: 5 }));
+    this.iosHint.anchor.set(1, 0);
+    this.iosHint.position.set(WIDTH - 24, 18);
+    this.addChild(this.iosHint);
+    this.refreshInstall();
+    this.offInstall = Install.onChange(() => this.refreshInstall());
+
     Keyboard.down.on("key", this.onKey, this);
     this.interactive = true;
     this.on("pointertap", () => this.go());
+  }
+
+  private installBtn!: TextButton;
+  private iosHint!: Text;
+  private offInstall: () => void = () => undefined;
+
+  private refreshInstall(): void {
+    this.installBtn.visible = Install.available && !Install.standalone;
+    this.iosHint.visible = Install.isIOS && !Install.standalone;
   }
 
   private onKey(code: string): void {
@@ -296,5 +319,6 @@ export class TitleScene extends Container implements IScene {
 
   public onExit(): void {
     Keyboard.down.off("key", this.onKey, this);
+    this.offInstall();
   }
 }

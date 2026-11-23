@@ -17,6 +17,7 @@ import { GameScene } from "./Scenas/GameScene";
 import { getCharacter } from "./game/characters";
 import { style } from "./ui/styles";
 import { Keyboard } from "./utils/Keyboard";
+import { Install } from "./core/Install";
 
 const app = new Application({
   view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
@@ -28,6 +29,8 @@ const app = new Application({
 });
 
 Keyboard.initialize();
+// app instalable (el service worker sólo en el build publicado)
+Install.init(process.env.NODE_ENV === "production");
 
 // Escala el canvas para que entre en la ventana manteniendo la relación 16:9 (letterbox).
 function resize(): void {
