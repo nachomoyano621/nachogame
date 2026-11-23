@@ -16,6 +16,12 @@ export interface WorldArtBank {
   brickGolem: Texture[];
   brickShot: Texture;
   bricksGround: Texture;
+  skater: Texture[];
+  flamingo: Texture[];
+  neonCar: Texture[];
+  dorado: Texture;
+  doradoBoss: Texture[];
+  neonGround: Texture;
 }
 
 // ------------------------------------------------------------------ mundo de bloques
@@ -496,6 +502,245 @@ function drawUfo(g: Graphics, p: number): void {
   }
 }
 
+// ------------------------------------------------------------------ Santa Fe Vice City (diseño propio, estética neón de los 80)
+
+const NEON_PINK = 0xff2fb9;
+const NEON_CYAN = 0x18ffff;
+
+/** Patinador ochentoso: campera magenta, short cian, vincha y anteojos de sol, rollers. */
+function drawSkater(g: Graphics, p: number): void {
+  const s = p ? 1 : -1;
+  const skin = 0xf1c27d;
+  // piernas con calzas
+  g.lineStyle({ width: 12, color: 0x7c4dff, ...ROUND });
+  g.moveTo(56, 108);
+  g.lineTo(56 + 16 * s, 148);
+  g.moveTo(66, 108);
+  g.lineTo(66 - 14 * s, 148);
+  g.lineStyle(0);
+  // rollers
+  for (const fx of [56 + 16 * s, 66 - 14 * s]) {
+    g.beginFill(0xffffff);
+    g.drawRoundedRect(fx - 12, 146, 26, 12, 4);
+    g.endFill();
+    g.beginFill(NEON_CYAN);
+    for (const wx of [-7, 2, 11]) g.drawCircle(fx + wx, 161, 4.5);
+    g.endFill();
+  }
+  // short y campera
+  g.beginFill(NEON_CYAN);
+  g.drawRoundedRect(44, 96, 34, 18, 5);
+  g.endFill();
+  g.beginFill(NEON_PINK);
+  g.drawRoundedRect(42, 60, 38, 42, 12);
+  g.endFill();
+  g.beginFill(0xffea00);
+  g.drawRect(42, 74, 38, 5);
+  g.endFill();
+  // brazos
+  g.lineStyle({ width: 9, color: NEON_PINK, ...ROUND });
+  g.moveTo(46, 66);
+  g.lineTo(38 - 6 * s, 92);
+  g.moveTo(76, 66);
+  g.lineTo(86 + 6 * s, 90);
+  g.lineStyle(0);
+  g.beginFill(skin);
+  g.drawCircle(38 - 6 * s, 94, 5);
+  g.drawCircle(86 + 6 * s, 92, 5);
+  // cabeza
+  g.drawCircle(61, 42, 17);
+  g.endFill();
+  g.beginFill(0x3e2723);
+  g.drawPolygon([42, 40, 46, 22, 60, 16, 76, 22, 80, 36, 74, 28, 50, 30]);
+  g.endFill();
+  g.beginFill(0xffea00);
+  g.drawRect(44, 29, 36, 5);
+  g.endFill();
+  // anteojos de sol
+  g.beginFill(0x111111);
+  g.drawRoundedRect(58, 38, 22, 8, 3);
+  g.endFill();
+  g.beginFill(NEON_CYAN);
+  g.drawRect(61, 39, 6, 2);
+  g.endFill();
+}
+
+/** Flamenco rosa volando: cuello estirado y patas para atrás. */
+function drawFlamingo(g: Graphics, p: number): void {
+  const pink = 0xff6fb5;
+  const dark = 0xe0408f;
+  // patas
+  g.lineStyle({ width: 4, color: dark, ...ROUND });
+  g.moveTo(60, 66);
+  g.lineTo(14, 70);
+  g.moveTo(60, 70);
+  g.lineTo(16, 78);
+  // cuello
+  g.lineStyle({ width: 9, color: pink, ...ROUND });
+  g.moveTo(108, 56);
+  g.quadraticCurveTo(130, 44, 150, 48);
+  g.lineStyle(0);
+  // cuerpo
+  g.beginFill(pink);
+  g.drawEllipse(84, 62, 34, 18);
+  g.endFill();
+  // ala (arriba / abajo)
+  g.beginFill(dark);
+  if (p) {
+    g.drawPolygon([70, 56, 104, 54, 92, 12, 76, 20]);
+    g.beginFill(0x111111);
+    g.drawPolygon([92, 12, 76, 20, 84, 8]);
+  } else {
+    g.drawPolygon([70, 66, 104, 64, 96, 104, 78, 98]);
+    g.beginFill(0x111111);
+    g.drawPolygon([96, 104, 78, 98, 88, 112]);
+  }
+  g.endFill();
+  // cabeza y pico
+  g.beginFill(pink);
+  g.drawCircle(152, 47, 9);
+  g.endFill();
+  g.beginFill(0xffffff);
+  g.drawPolygon([158, 44, 170, 48, 158, 50]);
+  g.endFill();
+  g.beginFill(0x111111);
+  g.drawPolygon([165, 47, 170, 48, 166, 56]);
+  g.drawCircle(153, 44, 2);
+  g.endFill();
+}
+
+/** Auto deportivo neón (va hacia la izquierda), con luz de abajo. */
+function drawNeonCar(g: Graphics, p: number): void {
+  g.beginFill(NEON_CYAN, 0.35);
+  g.drawEllipse(115, 84, 104, 9);
+  g.endFill();
+  g.lineStyle(3, 0x3d0050);
+  g.beginFill(NEON_PINK);
+  g.drawPolygon([6, 62, 14, 44, 70, 38, 96, 18, 160, 18, 196, 40, 222, 46, 224, 66, 6, 70]);
+  g.endFill();
+  g.beginFill(0x2a0a3d);
+  g.drawPolygon([102, 24, 156, 24, 182, 40, 82, 40]);
+  g.endFill();
+  g.lineStyle(0);
+  g.beginFill(NEON_CYAN, 0.8);
+  g.drawPolygon([108, 27, 130, 27, 130, 38, 92, 38]);
+  g.drawPolygon([136, 27, 154, 27, 174, 38, 136, 38]);
+  g.endFill();
+  g.beginFill(0xffea00);
+  g.drawRoundedRect(6, 48, 16, 8, 3);
+  g.endFill();
+  g.beginFill(0xff1744);
+  g.drawRoundedRect(214, 50, 10, 8, 3);
+  g.endFill();
+  g.beginFill(0xffffff, 0.6);
+  g.drawRect(30, 52, 180, 3);
+  g.endFill();
+  for (const wx of [56, 176]) {
+    g.beginFill(0x111111);
+    g.drawCircle(wx, 70, 18);
+    g.endFill();
+    g.beginFill(NEON_CYAN);
+    g.drawCircle(wx, 70, 8);
+    g.endFill();
+    g.lineStyle(3, 0x111111);
+    const a = p ? Math.PI / 4 : 0;
+    g.moveTo(wx + Math.cos(a) * 8, 70 + Math.sin(a) * 8);
+    g.lineTo(wx - Math.cos(a) * 8, 70 - Math.sin(a) * 8);
+    g.lineStyle(0);
+  }
+}
+
+/** Dorado (pez del Paraná) dorado y brillante, mirando a la izquierda. */
+function drawDoradoFish(g: Graphics, cx: number, cy: number, k: number, tailUp: number): void {
+  const gold = 0xffc107;
+  const dark = 0xff8f00;
+  g.lineStyle(3 * k, 0x8d5300);
+  g.beginFill(dark);
+  g.drawPolygon([cx + 40 * k, cy, cx + 70 * k, cy - (26 + tailUp) * k, cx + 64 * k, cy, cx + 70 * k, cy + (26 - tailUp) * k]);
+  g.endFill();
+  g.beginFill(gold);
+  g.drawEllipse(cx, cy, 48 * k, 24 * k);
+  g.endFill();
+  g.lineStyle(0);
+  g.beginFill(dark);
+  g.drawPolygon([cx - 14 * k, cy - 20 * k, cx + 18 * k, cy - 36 * k, cx + 26 * k, cy - 18 * k]);
+  g.endFill();
+  g.beginFill(0xfff59d, 0.8);
+  g.drawEllipse(cx - 4 * k, cy + 8 * k, 30 * k, 8 * k);
+  g.endFill();
+  g.lineStyle(2 * k, dark, 0.7);
+  for (let i = -2; i <= 2; i++) {
+    g.moveTo(cx + i * 12 * k - 4 * k, cy - 14 * k);
+    g.quadraticCurveTo(cx + i * 12 * k + 4 * k, cy, cx + i * 12 * k - 4 * k, cy + 14 * k);
+  }
+  g.lineStyle(0);
+  g.beginFill(0xffffff);
+  g.drawCircle(cx - 30 * k, cy - 6 * k, 6 * k);
+  g.endFill();
+  g.beginFill(0x111111);
+  g.drawCircle(cx - 32 * k, cy - 6 * k, 3 * k);
+  g.endFill();
+}
+
+/** DORADO GIGANTE: el pez dorado con piernas, zapatillas neón y anteojos de sol. */
+function drawDoradoBoss(g: Graphics, p: number): void {
+  const s = p ? 1 : -1;
+  g.lineStyle({ width: 16, color: 0xffb300, ...ROUND });
+  g.moveTo(112, 140);
+  g.lineTo(112 - 16 * s, 182);
+  g.moveTo(150, 140);
+  g.lineTo(150 + 16 * s, 182);
+  g.lineStyle(0);
+  for (const [fx, col] of [[112 - 16 * s, NEON_PINK], [150 + 16 * s, NEON_CYAN]] as const) {
+    g.beginFill(col);
+    g.drawRoundedRect(fx - 22, 178, 40, 16, 6);
+    g.endFill();
+    g.beginFill(0xffffff);
+    g.drawRect(fx - 22, 190, 40, 4);
+    g.endFill();
+  }
+  drawDoradoFish(g, 130, 100, 2.1, s * 6);
+  // anteojos de sol neón sobre el ojo
+  g.lineStyle(4, NEON_PINK);
+  g.beginFill(0x111111);
+  g.drawRoundedRect(40, 76, 54, 26, 8);
+  g.endFill();
+  g.moveTo(94, 86);
+  g.lineTo(118, 82);
+  g.lineStyle(0);
+  g.beginFill(NEON_CYAN, 0.9);
+  g.drawRect(46, 80, 16, 4);
+  g.endFill();
+  // boca con sonrisa canchera
+  g.lineStyle(4, 0x8d5300);
+  g.moveTo(34, 118);
+  g.quadraticCurveTo(48, 126, 60, 116);
+  g.lineStyle(0);
+}
+
+/** Asfalto de la costanera con grilla neón. */
+function drawNeonGround(g: Graphics): void {
+  g.beginFill(0x1a0b2e);
+  g.drawRect(0, 0, 256, 112);
+  g.endFill();
+  g.lineStyle(2, NEON_PINK, 0.45);
+  for (let x = 0; x < 256; x += 32) {
+    g.moveTo(x, 12);
+    g.lineTo(x, 112);
+  }
+  for (const y of [34, 62, 96]) {
+    g.moveTo(0, y);
+    g.lineTo(256, y);
+  }
+  g.lineStyle(0);
+  g.beginFill(NEON_PINK);
+  g.drawRect(0, 0, 256, 6);
+  g.endFill();
+  g.beginFill(NEON_CYAN);
+  g.drawRect(0, 8, 256, 3);
+  g.endFill();
+}
+
 export function buildWorldArt(r: AbstractRenderer): void {
   const bake = (draw: (g: Graphics) => void, region: Rectangle): Texture => {
     const g = new Graphics();
@@ -520,4 +765,10 @@ export function buildWorldArt(r: AbstractRenderer): void {
   WArt.brickGolem = two(drawBrickGolem, new Rectangle(0, 16, 228, 244));
   WArt.brickShot = bake(drawBrickShot, new Rectangle(-24, -22, 48, 36));
   WArt.bricksGround = bake(drawBricksGround, new Rectangle(0, 0, 256, 112));
+  WArt.skater = two(drawSkater, new Rectangle(14, 4, 100, 166));
+  WArt.flamingo = two(drawFlamingo, new Rectangle(0, 0, 176, 116));
+  WArt.neonCar = two(drawNeonCar, new Rectangle(0, 10, 230, 86));
+  WArt.dorado = bake((g) => drawDoradoFish(g, 0, 0, 0.8, 0), new Rectangle(-44, -34, 106, 68));
+  WArt.doradoBoss = two(drawDoradoBoss, new Rectangle(0, 20, 290, 178));
+  WArt.neonGround = bake(drawNeonGround, new Rectangle(0, 0, 256, 112));
 }

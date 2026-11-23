@@ -4,7 +4,7 @@ import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { LEVEL_NAMES } from "../game/Background";
 import { CHARACTERS, CharacterId } from "../game/characters";
-import { GameMode, GameOptions, dailyRule, modeBestKey } from "../game/modes";
+import { GameMode, GameOptions, dailyRule, modeBestKey, reachedWorld } from "../game/modes";
 import { Keyboard } from "../utils/Keyboard";
 import { TextButton } from "./Button";
 import { style } from "./styles";
@@ -35,6 +35,7 @@ export class PlayMenu extends Container {
   private readonly cards: Container[] = [];
   private readonly cardBgs: Graphics[] = [];
   private worldText!: Text;
+  private worldHint!: Text;
   private readonly playersBtns: Graphics[] = [];
   private p2Row!: Container;
   private p2Text!: Text;
@@ -44,7 +45,7 @@ export class PlayMenu extends Container {
 
   constructor(private readonly o: PlayMenuOpts) {
     super();
-    this.maxWorld = Math.max(1, Math.min(WORLDS + 1, Storage.maxWorld));
+    this.maxWorld = reachedWorld();
     this.p2Options = CHARACTERS.filter((c) => !c.unlock || Storage.isUnlocked(c.id)).map((c) => c.id);
     this.p2Idx = Math.max(0, this.p2Options.findIndex((id) => id !== o.p1Id));
 
@@ -89,7 +90,7 @@ export class PlayMenu extends Container {
     const bestSinFin = Storage.bestFor(modeBestKey("sinfin", o.difficulty));
     const bestDia = Storage.bestFor(modeBestKey("dia", o.difficulty));
     const info: Record<GameMode, { icon: string; name: string; desc: string; foot: string; color: number }> = {
-      aventura: { icon: "🗺️", name: "AVENTURA", desc: "Los 7 mundos, sus jefes y el DINO-X del laboratorio", foot: "", color: 0xff7043 },
+      aventura: { icon: "🗺️", name: "AVENTURA", desc: `Los ${WORLDS} mundos, sus jefes y el DINO-X del laboratorio`, foot: "", color: 0xff7043 },
       sinfin: { icon: "♾️", name: "SIN FIN", desc: "Cada 40 s cambia el mundo y todo va más rápido. ¿Cuánto aguantás?", foot: `RÉCORD: ${bestSinFin}`, color: 0xb388ff },
       dia: { icon: rule.icon, name: "DESAFÍO DEL DÍA", desc: `Hoy: ${rule.name}\n${rule.desc}`, foot: `RÉCORD DE HOY: ${bestDia}`, color: 0x69f0ae },
     };
@@ -116,10 +117,10 @@ export class PlayMenu extends Container {
         this.worldText.anchor.set(0.5);
         this.worldText.y = 140;
         c.addChild(this.worldText, this.arrow("◀", -CARD_W / 2 + 32, 140, () => this.cycleWorld(-1)), this.arrow("▶", CARD_W / 2 - 32, 140, () => this.cycleWorld(1)));
-        const hint = new Text(this.maxWorld > 1 ? "Elegí desde qué mundo arrancar" : "Pasá mundos para poder elegirlos acá", style({ fontSize: 20, fill: "#bdbdbd", strokeThickness: 0 }));
-        hint.anchor.set(0.5);
-        hint.y = 185;
-        c.addChild(hint);
+        this.worldHint = new Text("", style({ fontSize: 20, fill: "#bdbdbd", strokeThickness: 0 }));
+        this.worldHint.anchor.set(0.5);
+        this.worldHint.y = 185;
+        c.addChild(this.worldHint);
       } else {
         const foot = new Text(d.foot, style({ fontSize: 30, fill: "#ffd54f", strokeThickness: 6 }));
         foot.anchor.set(0.5);
@@ -174,7 +175,7 @@ export class PlayMenu extends Container {
   }
 
   private cycleWorld(step: number): void {
-    const n = this.maxWorld;
+    const n = WORLDS + 1;
     this.world = ((this.world - 1 + step + n) % n) + 1;
     this.mode = "aventura";
     Sfx.click();
@@ -208,7 +209,12 @@ export class PlayMenu extends Container {
       this.cards[i].alpha = on ? 1 : 0.75;
     });
     const w = this.world;
-    this.worldText.text = w > WORLDS ? "LABORATORIO (DINO-X)" : `MUNDO ${w} · ${LEVEL_NAMES[w - 1]}`;
+    const wname = w > WORLDS ? "LABORATORIO (DINO-X)" : `MUNDO ${w} · ${LEVEL_NAMES[w - 1]}`;
+    const locked = w > this.maxWorld;
+    this.worldText.text = locked ? `🔒 ${wname}` : wname;
+    this.worldText.style.fill = locked ? "#9e9e9e" : "#ffd54f";
+    this.worldHint.text = locked ? `🔒 Pasá el ${w - 1 > WORLDS ? "laboratorio" : `MUNDO ${w - 1}`} para desbloquearlo` : this.maxWorld > 1 ? "Elegí desde qué mundo arrancar" : "Pasá mundos para poder arrancar desde ellos";
+    this.worldHint.style.fill = locked ? "#ff8a80" : "#bdbdbd";
     if (!TOUCH) {
       this.playersBtns.forEach((b, i) => {
         const on = this.players === i + 1;
@@ -257,6 +263,11 @@ export class PlayMenu extends Container {
 
   private start(): void {
     if (this.closed) return;
+    if (this.mode === "aventura" && this.world > this.maxWorld) {
+      Sfx.hurt();
+      this.worldHint.scale.set(1.25);
+      return;
+    }
     this.closed = true;
     Keyboard.down.off("key", this.onKey, this);
     Sfx.click();
@@ -278,6 +289,9 @@ export class PlayMenu extends Container {
   public update(dt: number): void {
     this.t += dt;
     this.ready -= dt;
+    if (this.worldHint && this.worldHint.scale.x > 1) {
+      this.worldHint.scale.set(Math.max(1, this.worldHint.scale.x - dt));
+    }
     const i = MODES.indexOf(this.mode);
     this.cards[i].y = 560 + Math.sin(this.t * 3) * 5;
   }

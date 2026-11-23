@@ -1,4 +1,6 @@
 import { CharacterId } from "./characters";
+import { WORLDS } from "../config";
+import { Storage } from "../core/Storage";
 
 /** Formas de jugar. */
 export type GameMode = "aventura" | "sinfin" | "dia";
@@ -50,4 +52,25 @@ export function dailyRule(d = new Date()): DailyRule {
 /** Clave del récord de cada modo (el del día cambia cada día). */
 export function modeBestKey(mode: GameMode, difficulty: string): string {
   return mode === "dia" ? `dia:${todayKey()}:${difficulty}` : `${mode}:${difficulty}`;
+}
+
+/**
+ * Mundo más lejano alcanzado (WORLDS + 1 = laboratorio). Además del registro nuevo,
+ * mira lo que ya estaba guardado: récords, partida para continuar y el logro de vencer al DINO-X.
+ */
+export function reachedWorld(): number {
+  let w = Storage.maxWorld;
+  for (const d of ["facil", "medio", "dificil"]) {
+    for (const e of Storage.records(d)) {
+      w = Math.max(w, e.won ? WORLDS + 1 : e.world);
+    }
+  }
+  const run = Storage.run;
+  if (run) {
+    w = Math.max(w, run.lab ? WORLDS + 1 : run.world);
+  }
+  if (Storage.achievements.includes("campeon")) {
+    w = WORLDS + 1;
+  }
+  return Math.max(1, Math.min(WORLDS + 1, w));
 }
