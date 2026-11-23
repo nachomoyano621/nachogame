@@ -1,4 +1,5 @@
-import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
+import { style } from "../ui/styles";
 import { DOWN_KEYS, GROUND_Y, LEFT_KEYS, RIGHT_KEYS, WIDTH } from "../config";
 import { Keyboard } from "../utils/Keyboard";
 import { CharacterDef, scaleFor } from "./characters";
@@ -8,6 +9,15 @@ import { CharacterDef, scaleFor } from "./characters";
  * coyote time, buffer de salto, caída rápida, invulnerabilidad y escudo.
  * Emite "jump" (air: boolean) y "land".
  */
+/** Teclas de movimiento de un jugador (en 2 jugadores cada uno tiene las suyas). */
+export interface MoveKeys {
+  left: string[];
+  right: string[];
+  down: string[];
+}
+
+export const DEFAULT_MOVE: MoveKeys = { left: LEFT_KEYS, right: RIGHT_KEYS, down: DOWN_KEYS };
+
 export class Player extends Container {
   public static readonly GRAVITY = 2400;
   private static readonly MAX_FALL = 1700;
@@ -45,7 +55,10 @@ export class Player extends Container {
   private readonly hat = new Sprite(Texture.EMPTY);
   private hatHead = { y: 0.95, x: 0, scale: 0.85 };
 
-  constructor(public readonly def: CharacterDef) {
+  /** Etiqueta "J1"/"J2" sobre la cabeza (sólo con 2 jugadores). */
+  private tag: Text | null = null;
+
+  constructor(public readonly def: CharacterDef, private readonly keys: MoveKeys = DEFAULT_MOVE) {
     super();
     const frames = def.frames();
     this.sprite = new AnimatedSprite(frames, false);
@@ -107,6 +120,14 @@ export class Player extends Container {
     this.hat.anchor.set(anchor[0], anchor[1]);
     this.hat.visible = tex !== null;
     this.hatHead = head;
+  }
+
+/** Etiqueta sobre la cabeza para distinguir a los dos jugadores. */
+  public setTag(text: string, color: string): void {
+    this.tag = new Text(text, style({ fontSize: 30, fill: color, strokeThickness: 6 }));
+    this.tag.anchor.set(0.5, 1);
+    this.tag.y = -this.def.height - 18;
+    this.addChild(this.tag);
   }
 
   /** De dónde salen las balas (punta del arma). */
@@ -176,7 +197,7 @@ export class Player extends Container {
     }
 
     // --- horizontal
-    const dir = (Keyboard.isDown(...RIGHT_KEYS) ? 1 : 0) - (Keyboard.isDown(...LEFT_KEYS) ? 1 : 0);
+    const dir = (Keyboard.isDown(...this.keys.right) ? 1 : 0) - (Keyboard.isDown(...this.keys.left) ? 1 : 0);
     const target = dir * this.def.speed * this.speedMul;
     this.vx += (target - this.vx) * Math.min(1, dt * (this.onGround ? 18 : 9));
     if (dir !== 0) {
@@ -199,11 +220,11 @@ export class Player extends Container {
     if (this.vy < 0 && !this.jumpHeld) {
       g *= 2.1;
     }
-    if (!this.onGround && Keyboard.isDown(...DOWN_KEYS)) {
+    if (!this.onGround && Keyboard.isDown(...this.keys.down)) {
       g *= 2.3;
     }
     this.vy = Math.min(this.vy + g * dt, Player.MAX_FALL);
-    this.gliding = !!this.def.glide && !this.onGround && this.jumpHeld && this.vy > 0 && !Keyboard.isDown(...DOWN_KEYS);
+    this.gliding = !!this.def.glide && !this.onGround && this.jumpHeld && this.vy > 0 && !Keyboard.isDown(...this.keys.down);
     if (this.gliding) {
       this.vy = Math.min(this.vy, 150);
     }

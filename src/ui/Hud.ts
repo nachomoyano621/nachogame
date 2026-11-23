@@ -71,6 +71,8 @@ export class Hud extends Container {
   private readonly powerIcon = new Text("⚡", style({ fontSize: 34, strokeThickness: 0 }));
   private powerFrac = -1;
   private powerNudge = 0;
+  /** Poder del jugador 2 (se crea sólo si juegan dos). */
+  private power2: { ring: Graphics; text: Text; frac: number } | null = null;
   private readonly achIcon = new Text("", style({ fontSize: 52, strokeThickness: 0 }));
   private readonly achName = new Text("", style({ fontSize: 32, strokeThickness: 6 }));
   private readonly achQueue: [string, string][] = [];
@@ -368,6 +370,36 @@ export class Hud extends Container {
       g.arc(648, 185, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.001, Math.min(1, frac)));
     }
     this.powerIcon.alpha = ready ? 1 : 0.4;
+  }
+
+/** Poder del jugador 2 (al lado del del jugador 1). */
+  public setPower2(name: string, frac: number): void {
+    if (!this.power2) {
+      const bg = new Graphics();
+      bg.beginFill(0x000000, 0.45);
+      bg.drawRoundedRect(952, 154, 360, 62, 18);
+      bg.endFill();
+      const ring = new Graphics();
+      const icon = new Text("⚡", style({ fontSize: 30, strokeThickness: 0 }));
+      icon.anchor.set(0.5);
+      icon.position.set(988, 185);
+      const text = new Text("", style({ fontSize: 21, fill: "#80d8ff", strokeThickness: 5 }));
+      text.anchor.set(0, 0.5);
+      text.position.set(1024, 185);
+      this.addChild(bg, ring, icon, text);
+      this.power2 = { ring, text, frac: -1 };
+    }
+    const p = this.power2;
+    p.text.text = "J2 (K): " + name;
+    if (Math.abs(frac - p.frac) > 0.004 || (frac >= 1 && p.frac < 1)) {
+      p.frac = frac;
+      const g = p.ring;
+      g.clear();
+      g.lineStyle(6, 0xffffff, 0.2);
+      g.drawCircle(988, 185, 22);
+      g.lineStyle(6, frac >= 1 ? 0x80d8ff : 0x0277bd, 1);
+      g.arc(988, 185, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.001, Math.min(1, frac)));
+    }
   }
 
   /** Apretó el poder sin que esté listo: el anillo tiembla. */
