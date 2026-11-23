@@ -1,0 +1,17 @@
+{
+  "name": "Tomi Game",
+  "short_name": "Tomi Game",
+  "description": "Recorré 7 mundos, juntá monedas y vencé a 8 jefes.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#b71c1c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
