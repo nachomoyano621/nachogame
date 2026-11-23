@@ -157,6 +157,8 @@ export class StartScene extends Container implements IScene {
   private readonly worldName: Text;
   private worldIdx = 0;
   private worldT = 0;
+  /** Mundo elegido: el fondo se queda fijo en él (si no, van pasando todos). */
+  private fixedWorld: number | null = null;
   /** Tabla de récords o de logros abierta encima del menú. */
   private overlay: (Container & { update(dt: number): void }) | null = null;
 
@@ -180,7 +182,11 @@ export class StartScene extends Container implements IScene {
     this.worldName = new Text("", style({ fontSize: 21, fill: "#ffe082", strokeThickness: 5 }));
     this.worldName.position.set(22, 14);
     this.addChild(this.worldName);
-    this.showWorld(0);
+    if (StartScene.pendingWorld) {
+      this.fixWorld(StartScene.pendingWorld);
+    } else {
+      this.showWorld(0);
+    }
 
     this.title = new Text(
       "TOMI GAME",
@@ -378,12 +384,13 @@ export class StartScene extends Container implements IScene {
       return;
     }
     // ¿cómo querés jugar? (aventura / sin fin / desafío del día, mundo y jugadores)
-    const startWorld = StartScene.pendingWorld ?? 1;
+    const startWorld = StartScene.pendingWorld ?? this.fixedWorld ?? 1;
     StartScene.pendingWorld = null;
     this.overlay = new PlayMenu({
       p1Id: def.id,
       difficulty: diff.id,
       startWorld,
+      onWorldChange: (w: number) => this.fixWorld(w),
       onStart: (o: GameOptions) => SceneManager.change(new GameScene(def, diff, undefined, o)),
       onClose: () => this.closeOverlay(),
     });
@@ -391,6 +398,12 @@ export class StartScene extends Container implements IScene {
   }
 
   /** Cambia el mundo que se ve de fondo en el menú. */
+/** Deja el fondo quieto en el mundo elegido (1..WORLDS). */
+  private fixWorld(w: number): void {
+    this.fixedWorld = w;
+    this.showWorld(w - 1);
+  }
+
   private showWorld(i: number): void {
     this.worldIdx = i % WORLDS;
     this.bg.setTheme(this.worldIdx, 1.2);
@@ -405,7 +418,7 @@ export class StartScene extends Container implements IScene {
     }
     this.bg.update(dt, 240);
     this.worldT += dt;
-    if (this.worldT >= 4) {
+    if (this.fixedWorld === null && this.worldT >= 4) {
       this.worldT = 0;
       this.showWorld(this.worldIdx + 1);
     }

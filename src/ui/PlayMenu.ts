@@ -19,6 +19,8 @@ export interface PlayMenuOpts {
   difficulty: string;
   /** Mundo ya elegido (por ejemplo, tocando su tarjeta en el título). */
   startWorld?: number;
+  /** Cambió el mundo elegido (el menú de atrás muestra ese fondo). */
+  onWorldChange?: (w: number) => void;
   onStart: (o: GameOptions) => void;
   onClose: () => void;
 }
@@ -54,7 +56,7 @@ export class PlayMenu extends Container {
     this.p2Idx = Math.max(0, this.p2Options.findIndex((id) => id !== o.p1Id));
 
     const dim = new Graphics();
-    dim.beginFill(0x05030a, 0.94);
+    dim.beginFill(0x05030a, 0.72);
     dim.drawRect(0, 0, WIDTH, HEIGHT);
     dim.endFill();
     dim.interactive = true;
@@ -128,9 +130,9 @@ export class PlayMenu extends Container {
           this.cycleWorld(1);
         });
         c.addChild(this.worldText, this.arrow("◀", -CARD_W / 2 + 32, 140, () => this.cycleWorld(-1)), this.arrow("▶", CARD_W / 2 - 32, 140, () => this.cycleWorld(1)));
-        this.worldHint = new Text("", style({ fontSize: 20, fill: "#bdbdbd", strokeThickness: 0 }));
+        this.worldHint = new Text("", style({ fontSize: 19, fill: "#bdbdbd", strokeThickness: 0, align: "center", wordWrap: true, wordWrapWidth: CARD_W - 50 }));
         this.worldHint.anchor.set(0.5);
-        this.worldHint.y = 185;
+        this.worldHint.y = 184;
         c.addChild(this.worldHint);
       } else {
         const foot = new Text(d.foot, style({ fontSize: 30, fill: "#ffd54f", strokeThickness: 6 }));
@@ -190,6 +192,7 @@ export class PlayMenu extends Container {
     this.world = ((this.world - 1 + step + n) % n) + 1;
     this.mode = "aventura";
     Sfx.click();
+    this.o.onWorldChange?.(this.world);
     this.refresh();
   }
 
@@ -223,11 +226,15 @@ export class PlayMenu extends Container {
     const wname = w > WORLDS ? "LABORATORIO (DINO-X)" : `MUNDO ${w} · ${LEVEL_NAMES[w - 1]}`;
     const locked = w > this.maxWorld;
     this.worldText.text = locked ? `🔒 ${wname}` : wname;
+    // si el nombre es largo se achica para no pisar las flechas
+    this.worldText.scale.set(1);
+    this.worldText.updateText(true);
+    this.worldText.scale.set(Math.min(1, (CARD_W - 130) / this.worldText.width));
     this.worldText.style.fill = locked ? "#9e9e9e" : "#ffd54f";
     this.worldHint.text = locked
       ? `🔒 Pasá el MUNDO ${w - 1} para desbloquearlo`
       : w > 1
-        ? "PRÁCTICA: el DINO-X sólo aparece si empezás en el MUNDO 1"
+        ? "PRÁCTICA · el DINO-X sólo aparece\nsi empezás en el MUNDO 1"
         : "Tocá las flechas o el nombre para elegir el mundo";
     this.worldHint.style.fill = locked || w > 1 ? "#ffab91" : "#bdbdbd";
     if (!TOUCH) {
