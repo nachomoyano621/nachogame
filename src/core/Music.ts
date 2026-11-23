@@ -63,6 +63,8 @@ export const TRACKS: Record<string, TrackDef> = {
   world5: { bpm: 152, root: 52, scale: HARMONIC, chords: [0, 5, 6, 4], chordsB: [3, 0, 5, 4], lead: "sawtooth", lead2: "square", bass: "square", drums: "double", seed: 67, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
   world6: { bpm: 120, root: 60, scale: WHOLE, chords: [0, 2, 4, 1], chordsB: [3, 1, 5, 2], lead: "sine", lead2: "triangle", bass: "sawtooth", drums: "techno", seed: 71, rhythm: MEDIUM, arp: true, ooh: true },
   world7: { bpm: 140, root: 64, scale: MAJOR, chords: [0, 4, 5, 3], chordsB: [1, 4, 0, 5], lead: "square", lead2: "triangle", bass: "triangle", drums: "march", seed: 83, rhythm: BOUNCY },
+  // Santa Fe Vice City: synthwave (tema propio)
+  world8: { bpm: 104, root: 57, scale: MINOR, chords: [0, 5, 2, 6], chordsB: [3, 5, 0, 6], lead: "sawtooth", lead2: "square", bass: "sawtooth", drums: "techno", seed: 89, rhythm: MEDIUM, busyBass: true, arp: true, leadVol: 0.55 },
   boss: { bpm: 166, root: 57, scale: HARMONIC, chords: [0, 0, 5, 4], chordsB: [5, 6, 4, 4], lead: "sawtooth", lead2: "square", bass: "square", drums: "double", seed: 97, rhythm: BUSY, busyBass: true, leadVol: 0.55 },
   final: { bpm: 158, root: 50, scale: HARMONIC, chords: [0, 5, 1, 4], chordsB: [5, 3, 1, 4], lead: "square", lead2: "sawtooth", bass: "sawtooth", drums: "techno", seed: 101, rhythm: BUSY, busyBass: true },
   win: { bpm: 128, root: 60, scale: MAJOR, chords: [0, 3, 4, 0], lead: "square", bass: "triangle", drums: "march", seed: 113, rhythm: MEDIUM, arp: true, short: true },

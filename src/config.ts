@@ -7,7 +7,7 @@ export const GROUND_Y = 972;
 /** Monedas que hay que juntar EN CADA MUNDO para que se abra el portal (el contador vuelve a 0). */
 export const COINS_PER_WORLD = 50;
 /** Cantidad de mundos; desde el último, el portal lleva al laboratorio del jefe final. */
-export const WORLDS = 7;
+export const WORLDS = 8;
 export const MAX_LIVES = 6;
 
 /** Velocidad base a la que "corre" el mundo (px/s). */

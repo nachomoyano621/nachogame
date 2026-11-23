@@ -120,23 +120,25 @@ export class Flyer extends Enemy {
 /** Volcán: bola de lava que burbujea en el piso y salta. No se puede aplastar. */
 export class LavaBall extends Enemy {
   public override readonly stompable = false;
-  public override readonly label = "lava";
+  public override readonly label: string;
   private readonly marker = new Graphics();
   private readonly ball: Sprite;
   private state: "warn" | "jump" = "warn";
   private timer = 1;
   private vy = 0;
 
-  constructor(x: number) {
+  /** `look`: el dorado de Santa Fe usa otro dibujo y colores de agua. */
+  constructor(x: number, private readonly look: { tex: Texture; label: string; colors: [number, number, number] } = { tex: WArt.lava, label: "lava", colors: [0xff6d00, 0xffd600, 0xff3d00] }) {
     super();
-    this.marker.beginFill(0xff6d00, 0.7);
+    this.label = look.label;
+    this.marker.beginFill(look.colors[0], 0.7);
     this.marker.drawEllipse(0, 0, 60, 14);
     this.marker.endFill();
-    this.marker.beginFill(0xffd600, 0.8);
+    this.marker.beginFill(look.colors[1], 0.8);
     this.marker.drawEllipse(0, 0, 30, 7);
     this.marker.endFill();
     this.addChild(this.marker);
-    this.ball = new Sprite(WArt.lava);
+    this.ball = new Sprite(look.tex);
     this.ball.anchor.set(0.5);
     this.ball.visible = false;
     this.addChild(this.ball);
@@ -149,7 +151,7 @@ export class LavaBall extends Enemy {
       this.timer -= dt;
       this.marker.scale.set(0.6 + Math.sin(this.t * 20) * 0.15 + (1 - this.timer) * 0.4);
       if (Math.random() < 0.5) {
-        ctx.burst(this.x + rand(-40, 40), GROUND_Y - 4, { count: 1, colors: [0xff6d00, 0xffd600], speed: 120, life: 0.4, gravity: 600, up: 250, size: 0.8 });
+        ctx.burst(this.x + rand(-40, 40), GROUND_Y - 4, { count: 1, colors: [this.look.colors[0], this.look.colors[1]], speed: 120, life: 0.4, gravity: 600, up: 250, size: 0.8 });
       }
       if (this.timer <= 0) {
         this.state = "jump";
@@ -157,16 +159,16 @@ export class LavaBall extends Enemy {
         this.ball.visible = true;
         this.ball.y = 10;
         this.vy = -rand(1150, 1400);
-        ctx.burst(this.x, GROUND_Y - 10, { count: 18, colors: [0xff6d00, 0xffd600, 0xff3d00], speed: 420, life: 0.5, gravity: 900, up: 300 });
+        ctx.burst(this.x, GROUND_Y - 10, { count: 18, colors: [...this.look.colors], speed: 420, life: 0.5, gravity: 900, up: 300 });
       }
       return;
     }
     this.vy += 2300 * dt;
     this.ball.y += this.vy * dt;
-    this.ball.rotation += dt * 6;
-    ctx.burst(this.x, this.y + this.ball.y, { count: 1, colors: [0xff6d00, 0xffab00], speed: 60, life: 0.3, gravity: -100, size: 0.9 });
+    this.ball.rotation += dt * (this.look.label === "dorado" ? 3 : 6);
+    ctx.burst(this.x, this.y + this.ball.y, { count: 1, colors: [this.look.colors[0], this.look.colors[1]], speed: 60, life: 0.3, gravity: -100, size: 0.9 });
     if (this.vy > 0 && this.ball.y >= 10) {
-      ctx.burst(this.x, GROUND_Y - 10, { count: 14, colors: [0xff6d00, 0xffd600], speed: 300, life: 0.4, gravity: 900, up: 200 });
+      ctx.burst(this.x, GROUND_Y - 10, { count: 14, colors: [this.look.colors[0], this.look.colors[1]], speed: 300, life: 0.4, gravity: 900, up: 200 });
       this.gone = true;
     }
   }
@@ -249,5 +251,10 @@ export const WORLD_ENEMIES = {
   alien: (): Enemy => new Walker({ label: "alien", frames: WArt.alien, scale: 0.95, speed: [250, 320], hit: { w: 70, h: 125 }, stompable: true, anim: 0.15, hop: true }),
   bricky: (): Enemy => new Walker({ label: "bloquecito", frames: WArt.brickMonster, scale: 0.95, speed: [270, 350], hit: { w: 100, h: 96 }, stompable: true, anim: 0.18, hop: true }),
   copter: (): Enemy => new Flyer({ label: "helibloque", frames: WArt.brickCopter, scale: 0.9, speed: [260, 330], baseY: [620, 750], amp: 45, freq: 2, hit: { w: 110, h: 60 }, stompable: true, anim: 0.4 }),
+// Santa Fe Vice City
+  skater: (): Enemy => new Walker({ label: "patinador", frames: WArt.skater, scale: 0.95, speed: [330, 420], hit: { w: 60, h: 140 }, stompable: true, anim: 0.18 }),
+  flamingo: (): Enemy => new Flyer({ label: "flamenco", frames: WArt.flamingo, scale: 0.9, speed: [250, 320], baseY: [620, 740], amp: 45, freq: 1.8, hit: { w: 130, h: 56 }, stompable: true, anim: 0.12 }),
+  car: (): Enemy => new Walker({ label: "auto neón", frames: WArt.neonCar, scale: 0.9, speed: [470, 560], hit: { w: 190, h: 60 }, stompable: true, anim: 0.3 }),
+  dorado: (x: number): Enemy => new LavaBall(x, { tex: WArt.dorado, label: "dorado", colors: [0x18ffff, 0xb3e5fc, 0xffc107] }),
   ufo: (): Enemy => new Flyer({ label: "ovni", frames: WArt.ufo, scale: 0.9, speed: [260, 320], baseY: [610, 740], amp: 55, freq: 1.6, hit: { w: 140, h: 60 }, stompable: true, anim: 0.12 }),
 };

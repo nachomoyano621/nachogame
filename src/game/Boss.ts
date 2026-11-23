@@ -31,6 +31,7 @@ export const SHOTS: Record<string, ShotLook> = {
   laser: { label: "láser", tex: () => Art.acid, tint: 0xff4081, scale: 0.8, trail: [0xff80ab, 0xffffff] },
   brick: { label: "ladrillo", tex: () => WArt.brickShot, tint: 0xffffff, scale: 1, trail: [0xff6d00, 0xfdd835, 0x1e88e5] },
   acid: { label: "ácido", tex: () => Art.acid, tint: 0xffffff, scale: 1, trail: [0x76ff03, 0xb2ff59] },
+  water: { label: "chorro", tex: () => Art.acid, tint: 0x40c4ff, scale: 0.9, trail: [0x18ffff, 0xff2fb9, 0xffffff] },
 };
 
 /** Proyectil que tira un jefe (trayectoria en parábola). */
@@ -139,6 +140,7 @@ export const WORLD_BOSSES: BossConfig[] = [
   { name: "SALAMANDRA DE MAGMA", voice: "salamandra", intro: "¡Lanza bolas de fuego!", frames: () => WArt.salamander, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff6d00, shot: SHOTS.fire, hue: -15, anim: 0.15 },
   { name: "MARCIANO MALO GIGANTE", voice: "marciano", intro: "¡Dispara rayos láser y larga marcianitos!", frames: () => WArt.alien, facesRight: false, scale: 2.7, hpMul: 0.5, color: 0xff4081, shot: SHOTS.laser, hue: 150, anim: 0.12, babies: (x) => BOSS_BABIES.alien(x) },
   { name: "GIGANTE DE BLOQUES", voice: "bloques", intro: "¡Te tira ladrillos de juguete!", frames: () => WArt.brickGolem, facesRight: false, scale: 1.7, hpMul: 0.5, color: 0xfdd835, shot: SHOTS.brick, anim: 0.1 },
+  { name: "DORADO GIGANTE", voice: "dorado", intro: "¡El rey de la laguna Setúbal tiene anteojos de sol!", frames: () => WArt.doradoBoss, facesRight: false, scale: 1.75, hpMul: 0.5, color: 0xffc107, shot: SHOTS.water, anim: 0.14 },
 ];
 
 export const FINAL_BOSS: BossConfig = {

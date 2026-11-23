@@ -100,15 +100,15 @@ export class TitleScene extends Container implements IScene {
     this.title.position.set(WIDTH / 2, 160);
     this.addChild(this.title);
 
-    const sub = new Text("¡Recorré 7 mundos, juntá monedas y vencé a 8 jefes!", style({ fontSize: 46, fill: "#ffffff", strokeThickness: 8 }));
+    const sub = new Text(`¡Recorré ${WORLDS} mundos, juntá monedas y vencé a ${WORLDS + 1} jefes!`, style({ fontSize: 46, fill: "#ffffff", strokeThickness: 8 }));
     sub.anchor.set(0.5);
     sub.position.set(WIDTH / 2, 305);
     this.addChild(sub);
 
     // tarjetas de los 7 mundos
     const tex = worldThumbs();
-    const cw = 232;
-    const gap = 18;
+    const cw = 212;
+    const gap = 13;
     const x0 = (WIDTH - (WORLDS * cw + (WORLDS - 1) * gap)) / 2;
     tex.forEach((tx, i) => {
       const c = new Container();
@@ -128,11 +128,20 @@ export class TitleScene extends Container implements IScene {
       const num = new Text(`${i + 1}`, style({ fontSize: 26, strokeThickness: 4 }));
       num.anchor.set(0.5);
       num.position.set(18, 18);
-      const name = new Text(LEVEL_NAMES[i], style({ fontSize: 19, strokeThickness: 5, wordWrap: true, wordWrapWidth: cw, align: "center" }));
+      const name = new Text(LEVEL_NAMES[i], style({ fontSize: 18, strokeThickness: 5, wordWrap: true, wordWrapWidth: cw, align: "center" }));
       name.anchor.set(0.5, 0);
       name.position.set(cw / 2, 142);
       c.addChild(frame, img, badge, num, name);
       c.position.set(x0 + i * (cw + gap), 400);
+      // tocar un mundo: vas a elegir personaje y después arrancás en ese mundo
+      c.interactive = true;
+      c.cursor = "pointer";
+      c.hitArea = new Rectangle(-4, -4, cw + 8, 190);
+      c.on("pointertap", (e: { stopPropagation: () => void }) => {
+        e.stopPropagation();
+        StartScene.pendingWorld = i + 1;
+        this.go();
+      });
       this.cards.push(c);
       this.addChild(c);
     });

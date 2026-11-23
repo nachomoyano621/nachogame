@@ -4,7 +4,7 @@ import { Sfx } from "../core/Sfx";
 import { Storage } from "../core/Storage";
 import { LEVEL_NAMES } from "../game/Background";
 import { CHARACTERS, CharacterId } from "../game/characters";
-import { GameMode, GameOptions, dailyRule, modeBestKey, reachedWorld } from "../game/modes";
+import { GameMode, GameOptions, dailyRule, modeBestKey } from "../game/modes";
 import { Keyboard } from "../utils/Keyboard";
 import { TextButton } from "./Button";
 import { style } from "./styles";
@@ -17,6 +17,8 @@ const MODES: GameMode[] = ["aventura", "sinfin", "dia"];
 export interface PlayMenuOpts {
   p1Id: CharacterId;
   difficulty: string;
+  /** Mundo ya elegido (por ejemplo, tocando su tarjeta en el título). */
+  startWorld?: number;
   onStart: (o: GameOptions) => void;
   onClose: () => void;
 }
@@ -45,7 +47,9 @@ export class PlayMenu extends Container {
 
   constructor(private readonly o: PlayMenuOpts) {
     super();
-    this.maxWorld = reachedWorld();
+    // todos los mundos se pueden elegir desde el principio (pedido del dueño del juego)
+    this.maxWorld = WORLDS;
+    this.world = Math.max(1, Math.min(WORLDS, o.startWorld ?? 1));
     this.p2Options = CHARACTERS.filter((c) => !c.unlock || Storage.isUnlocked(c.id)).map((c) => c.id);
     this.p2Idx = Math.max(0, this.p2Options.findIndex((id) => id !== o.p1Id));
 
@@ -116,6 +120,13 @@ export class PlayMenu extends Container {
         this.worldText = new Text("", style({ fontSize: 23, fill: "#ffd54f", strokeThickness: 5 }));
         this.worldText.anchor.set(0.5);
         this.worldText.y = 140;
+        this.worldText.interactive = true;
+        this.worldText.cursor = "pointer";
+        this.worldText.hitArea = new Rectangle(-200, -30, 400, 60);
+        this.worldText.on("pointertap", (e: { stopPropagation: () => void }) => {
+          e.stopPropagation();
+          this.cycleWorld(1);
+        });
         c.addChild(this.worldText, this.arrow("◀", -CARD_W / 2 + 32, 140, () => this.cycleWorld(-1)), this.arrow("▶", CARD_W / 2 - 32, 140, () => this.cycleWorld(1)));
         this.worldHint = new Text("", style({ fontSize: 20, fill: "#bdbdbd", strokeThickness: 0 }));
         this.worldHint.anchor.set(0.5);
@@ -175,7 +186,7 @@ export class PlayMenu extends Container {
   }
 
   private cycleWorld(step: number): void {
-    const n = WORLDS + 1;
+    const n = WORLDS;
     this.world = ((this.world - 1 + step + n) % n) + 1;
     this.mode = "aventura";
     Sfx.click();
@@ -213,8 +224,12 @@ export class PlayMenu extends Container {
     const locked = w > this.maxWorld;
     this.worldText.text = locked ? `🔒 ${wname}` : wname;
     this.worldText.style.fill = locked ? "#9e9e9e" : "#ffd54f";
-    this.worldHint.text = locked ? `🔒 Pasá el ${w - 1 > WORLDS ? "laboratorio" : `MUNDO ${w - 1}`} para desbloquearlo` : this.maxWorld > 1 ? "Elegí desde qué mundo arrancar" : "Pasá mundos para poder arrancar desde ellos";
-    this.worldHint.style.fill = locked ? "#ff8a80" : "#bdbdbd";
+    this.worldHint.text = locked
+      ? `🔒 Pasá el MUNDO ${w - 1} para desbloquearlo`
+      : w > 1
+        ? "PRÁCTICA: el DINO-X sólo aparece si empezás en el MUNDO 1"
+        : "Tocá las flechas o el nombre para elegir el mundo";
+    this.worldHint.style.fill = locked || w > 1 ? "#ffab91" : "#bdbdbd";
     if (!TOUCH) {
       this.playersBtns.forEach((b, i) => {
         const on = this.players === i + 1;

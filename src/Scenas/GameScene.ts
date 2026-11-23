@@ -41,6 +41,7 @@ import { TOUCH } from "../ui/touch";
 import { Keyboard } from "../utils/Keyboard";
 import { FinalScene } from "./FinalScene";
 import { WinScene } from "./WinScene";
+import { StartScene } from "./StartScene";
 
 type State = "playing" | "paused" | "shop" | "dying" | "won" | "done";
 
@@ -64,12 +65,13 @@ const LEVEL_MESSAGES: Record<number, string> = {
   5: "Salamandras de fuego, bolas de lava y el REX",
   6: "¡Aliens, OVNIs y lluvia de meteoritos!",
   7: "Bloquecitos saltarines, helibloques y lluvia de ladrillos",
+  8: "Patinadores, flamencos, autos neón y dorados que saltan de la laguna",
 };
 
 /** Enemigos a los que el cráneo no les hace nada. */
-const SKULL_PROOF = new Set(["roca", "meteorito", "ladrillazo", "lava", "mosasaurio", "rex", "onda", ...Object.values(SHOTS).map((s) => s.label)]);
+const SKULL_PROOF = new Set(["roca", "meteorito", "ladrillazo", "lava", "dorado", "mosasaurio", "rex", "onda", ...Object.values(SHOTS).map((s) => s.label)]);
 /** Peligros que las balas atraviesan (no se pueden voltear). */
-const BULLET_PASS = new Set(["meteorito", "ladrillazo", "lava", "onda"]);
+const BULLET_PASS = new Set(["meteorito", "ladrillazo", "lava", "onda", "dorado"]);
 /** Bichos blindados: sólo la bazooka los voltea (las demás balas rebotan). */
 const ARMORED = new Set(["roca", "mosasaurio", "rex"]);
 
@@ -198,6 +200,8 @@ export class GameScene extends Container implements IScene {
   private runId = newRunId();
   /** Vidas perdidas en la partida (para el logro INTOCABLE). */
   private livesLost = 0;
+  /** Arrancó en otro mundo: es práctica y termina después del último mundo (al DINO-X se llega pasando todos). */
+  private practice = false;
   /** Modos SIN FIN / DESAFÍO: velocidad extra que va subiendo, tiempo del mundo y mundos recorridos. */
   private endlessMul = 1;
   private endlessT = 0;
@@ -284,6 +288,7 @@ export class GameScene extends Container implements IScene {
       Sfx.levelUp();
     });
 
+    this.practice = run ? !!run.practice : !this.endless && this.opts.startWorld > 1;
     if (run) {
       this.resume(run);
     } else if (this.endless) {
@@ -754,8 +759,11 @@ export class GameScene extends Container implements IScene {
       case 6: // Planeta alienígena
         pool.push([W.alien, 3], [W.ufo, 2.2]);
         break;
-      default: // Mundo de bloques
+      case 7: // Mundo de bloques
         pool.push([W.bricky, 3], [W.copter, 1.5]); // medido: el helibloque era la causa n°1 de vidas perdidas en el Mundo 7
+        break;
+      default: // Santa Fe Vice City
+        pool.push([W.skater, 3], [W.flamingo, 1.6], [W.car, 1.2], [() => W.dorado(Math.min(WIDTH - 80, this.player.x + rand(280, 820))), 1.6]);
         break;
     }
 
@@ -1486,6 +1494,10 @@ export class GameScene extends Container implements IScene {
   /** Portal sin enemigos tras vencer al jefe del mundo (en el último lleva al laboratorio). */
   private openPortal(): void {
     AudioCtl.music(`world${this.level}`); // vuelve la música del mundo
+    if (this.level === WORLDS && this.practice) {
+      this.endPractice();
+      return;
+    }
     const toLab = this.level === WORLDS;
     this.portal = new Portal(toLab ? "¡AL LABORATORIO!" : "PORTAL →");
     this.entities.addChild(this.portal);
@@ -1506,6 +1518,26 @@ export class GameScene extends Container implements IScene {
     if (this.state === "playing" && this.players.some((pl) => intersects(pl.getHitbox(), p.getHitbox()))) {
       this.enterPortal();
     }
+  }
+
+/** Práctica (arrancó en otro mundo): al terminar el último mundo no hay DINO-X, se vuelve al menú. */
+  private endPractice(): void {
+    this.state = "done";
+    for (const p of this.players) {
+      p.makeInvulnerable(99);
+    }
+    const bestKey = this.diff.id;
+    if (this.score > Storage.bestFor(bestKey)) {
+      Storage.setBestFor(bestKey, this.score);
+    }
+    Storage.saveRun(null);
+    Sfx.win();
+    this.hud.showBanner("¡PRÁCTICA COMPLETA!", `Para pelear con el DINO-X pasá los ${WORLDS} mundos empezando en el MUNDO 1`, 4);
+    window.setTimeout(() => {
+      if (!this.destroyed) {
+        SceneManager.change(new StartScene());
+      }
+    }, 4200);
   }
 
   /** Viaje por el portal: flash, se limpia la pantalla y cambia el mundo. */
@@ -1791,6 +1823,7 @@ export class GameScene extends Container implements IScene {
         bosses: this.bossesBeaten - (this.worldBossBeaten ? 1 : 0),
         credits: this.credits,
         p2Id: this.opts.p2Id ?? null,
+        practice: this.practice,
       };
       stats.run = run;
       Storage.saveRun(this.credits > 0 ? run : null);

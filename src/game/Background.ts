@@ -1,4 +1,5 @@
-import { AbstractRenderer, Container, Graphics, LINE_CAP, Rectangle, Sprite, Texture, TilingSprite } from "pixi.js";
+import { AbstractRenderer, Container, Graphics, LINE_CAP, Rectangle, Sprite, Text, Texture, TilingSprite } from "pixi.js";
+import { style } from "../ui/styles";
 import { Art } from "../art/ProceduralArt";
 import { WArt, drawBrick } from "../art/WorldArt";
 import { GROUND_Y, HEIGHT, WIDTH, rand } from "../config";
@@ -27,7 +28,7 @@ interface ThemeFx {
   emberUp: boolean;
   streakRate: number;
   groundTint: number;
-  ground?: "dirt" | "pier" | "bricks";
+  ground?: "dirt" | "pier" | "bricks" | "neon";
 }
 
 // ------------------------------------------------------------------ helpers de dibujo
@@ -414,6 +415,181 @@ function blockTheme(): Scenery {
   return s;
 }
 
+/**
+ * SANTA FE VICE CITY: atardecer neón de los 80 sobre la laguna Setúbal,
+ * con el Puente Colgante iluminado, edificios con carteles y palmeras de la costanera.
+ */
+function viceTheme(): Scenery {
+  const PINK = 0xff2fb9;
+  const CYAN = 0x18ffff;
+  const s = new Scenery();
+  s.addLayer(skyGradient(0x14002e, 0xff7a9a), 0);
+  const sky = new Graphics();
+  // estrellitas arriba
+  for (let i = 0; i < 70; i++) {
+    sky.beginFill(0xffffff, 0.35 + (i % 3) * 0.2);
+    sky.drawCircle((i * 397) % WIDTH, 20 + ((i * 131) % 300), 1.2 + (i % 3) * 0.6);
+    sky.endFill();
+  }
+  // sol retro con franjas
+  const cx = 1260;
+  const cy = 600;
+  const R = 250;
+  for (let y = -R; y < R; y += 4) {
+    const half = Math.sqrt(R * R - y * y);
+    const k = (y + R) / (2 * R);
+    // franjas cada vez más anchas en la mitad de abajo
+    if (y > 20 && Math.floor((y - 20) / 22) % 2 === 1 && (y - 20) % 22 < 6 + (y / R) * 10) continue;
+    sky.beginFill(lerpColor(0xffe259, 0xff2f8e, k));
+    sky.drawRect(cx - half, cy + y, half * 2, 4);
+    sky.endFill();
+  }
+  s.addLayer(sky, 0);
+
+  // edificios de la ciudad con ventanas y carteles de neón
+  const city = new Container();
+  const cityG = twice((g, ox) => {
+    const blds: [number, number, number][] = [[20, 120, 300], [150, 90, 220], [250, 140, 380], [420, 100, 260], [560, 160, 330], [760, 110, 240], [900, 130, 420], [1080, 90, 280], [1200, 150, 350], [1400, 100, 230], [1530, 170, 310], [1730, 120, 270]];
+    blds.forEach(([x, w, h], i) => {
+      const top = GROUND_Y - 230 - h;
+      g.beginFill(i % 2 ? 0x2a0b4a : 0x220838);
+      g.drawRect(x + ox, top, w, h + 10);
+      g.endFill();
+      g.lineStyle(3, i % 3 === 0 ? CYAN : PINK, 0.75);
+      g.moveTo(x + ox, top);
+      g.lineTo(x + ox + w, top);
+      g.lineStyle(0);
+      for (let wy = top + 18; wy < GROUND_Y - 250; wy += 26) {
+        for (let wx = x + 12; wx < x + w - 14; wx += 22) {
+          const on = ((wx * 7 + wy * 13) >> 3) % 3 !== 0;
+          if (!on) continue;
+          g.beginFill([CYAN, PINK, 0xffd166][(wx + wy) % 3], 0.65);
+          g.drawRect(wx + ox, wy, 10, 12);
+          g.endFill();
+        }
+      }
+    });
+  });
+  city.addChild(cityG);
+  for (const ox of [0, WIDTH]) {
+    const sign1 = new Text("SANTA FE", style({ fontSize: 46, fill: "#ff5fd2", stroke: "#3a0040", strokeThickness: 6, dropShadow: true, dropShadowColor: "#ff2fb9", dropShadowBlur: 14, dropShadowDistance: 0 }));
+    sign1.position.set(ox + 905, GROUND_Y - 230 - 420 - 60);
+    const sign2 = new Text("VICE CITY", style({ fontSize: 40, fill: "#7ffcff", stroke: "#003a40", strokeThickness: 6, dropShadow: true, dropShadowColor: "#18ffff", dropShadowBlur: 14, dropShadowDistance: 0 }));
+    sign2.position.set(ox + 1535, GROUND_Y - 230 - 310 - 54);
+    city.addChild(sign1, sign2);
+  }
+  s.addLayer(city, 0.05);
+
+  // laguna Setúbal con reflejos
+  const water = new Graphics();
+  const wTop = GROUND_Y - 230;
+  for (let i = 0; i < 24; i++) {
+    water.beginFill(lerpColor(0x3a0f63, 0x12042a, i / 23));
+    water.drawRect(0, wTop + i * 10, WIDTH, 11);
+    water.endFill();
+  }
+  for (let i = 0; i < 14; i++) {
+    const y = wTop + 12 + i * 15;
+    const w = 380 - i * 18;
+    water.beginFill(lerpColor(0xffe259, 0xff2f8e, i / 13), 0.55 - i * 0.03);
+    water.drawRect(cx - w / 2, y, w, 4);
+    water.endFill();
+  }
+  s.addLayer(water, 0);
+
+  // Puente Colgante: dos torres blancas, cables principales, péndolas y tablero con luces
+  const bridge = twice((g, ox) => {
+    const deck = GROUND_Y - 262;
+    const towers = [560, 1360];
+    const topY = deck - 250;
+    // pilares que bajan al agua
+    for (const tx of towers) {
+      g.beginFill(0xd9c7f0);
+      g.drawRect(tx + ox - 44, deck, 22, 34);
+      g.drawRect(tx + ox + 22, deck, 22, 34);
+      g.endFill();
+    }
+    // cable principal (catenaria): ancla - torre - centro - torre - ancla (mismo alto en los bordes para repetir)
+    const cable = (x: number): number => {
+      const [a, b] = towers;
+      if (x <= a) return topY + ((a - x) / a) * 170 * (1 - Math.pow((a - x) / a - 1, 2) * 0.4);
+      if (x >= b) return topY + ((x - b) / (WIDTH - b)) * 170 * (1 - Math.pow((x - b) / (WIDTH - b) - 1, 2) * 0.4);
+      const m = (a + b) / 2;
+      const t = (x - m) / (b - m);
+      return topY + 205 * (1 - t * t);
+    };
+    for (const [w, col, al] of [[12, PINK, 0.22], [4, 0xff8ae0, 1]] as const) {
+      g.lineStyle({ width: w, color: col, alpha: al, cap: LINE_CAP.ROUND });
+      g.moveTo(ox, cable(0));
+      for (let x = 10; x <= WIDTH; x += 10) g.lineTo(x + ox, cable(x));
+    }
+    // péndolas
+    g.lineStyle(2, 0xf3e5f5, 0.7);
+    for (let x = 20; x < WIDTH; x += 28) {
+      if (Math.abs(x - towers[0]) < 30 || Math.abs(x - towers[1]) < 30) continue;
+      g.moveTo(x + ox, cable(x));
+      g.lineTo(x + ox, deck);
+    }
+    g.lineStyle(0);
+    // tablero
+    g.beginFill(0x2a0b4a);
+    g.drawRect(ox, deck, WIDTH, 16);
+    g.endFill();
+    g.beginFill(CYAN, 0.9);
+    g.drawRect(ox, deck - 3, WIDTH, 3);
+    g.endFill();
+    // torres (pórticos blancos con borde neón)
+    for (const tx of towers) {
+      g.lineStyle(4, CYAN, 0.9);
+      g.beginFill(0xf3e5f5);
+      g.drawRect(tx + ox - 44, topY - 10, 22, deck - topY + 16);
+      g.drawRect(tx + ox + 22, topY - 10, 22, deck - topY + 16);
+      g.drawRect(tx + ox - 44, topY + 20, 88, 16);
+      g.drawRect(tx + ox - 44, topY + 110, 88, 14);
+      g.endFill();
+      g.lineStyle(0);
+      g.beginFill(0xff4081);
+      g.drawCircle(tx + ox - 33, topY - 16, 5);
+      g.drawCircle(tx + ox + 33, topY - 16, 5);
+      g.endFill();
+    }
+    // luces del tablero
+    for (let x = 14; x < WIDTH; x += 48) {
+      g.beginFill(0xffd166, 0.95);
+      g.drawCircle(x + ox, deck + 8, 3.5);
+      g.endFill();
+    }
+  });
+  s.addLayer(bridge, 0.1);
+
+  // palmeras de la costanera (siluetas con borde neón)
+  const palms = twice((g, ox) => {
+    for (const [x, h, lean] of [[90, 330, 1], [470, 270, -1], [900, 360, 1], [1330, 300, -1], [1700, 340, 1]] as const) {
+      const bx = x + ox;
+      const topX = bx + lean * 60;
+      const topY = GROUND_Y - h;
+      g.lineStyle({ width: 18, color: 0x14001f, cap: LINE_CAP.ROUND });
+      g.moveTo(bx, GROUND_Y);
+      g.quadraticCurveTo(bx + lean * 10, GROUND_Y - h * 0.5, topX, topY);
+      g.lineStyle({ width: 3, color: PINK, alpha: 0.5 });
+      g.moveTo(bx + 9, GROUND_Y);
+      g.quadraticCurveTo(bx + lean * 10 + 9, GROUND_Y - h * 0.5, topX + 8, topY);
+      g.lineStyle(0);
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI + (i / 6) * Math.PI + (i % 2 ? 0.15 : -0.1);
+        const len = 120 + (i % 3) * 18;
+        const ex = topX + Math.cos(a) * len;
+        const ey = topY + Math.sin(a) * len * 0.55 + 40;
+        g.beginFill(0x14001f);
+        g.drawPolygon([topX, topY - 6, (topX + ex) / 2, (topY + ey) / 2 - 26, ex, ey, (topX + ex) / 2, (topY + ey) / 2 - 6]);
+        g.endFill();
+      }
+    }
+  });
+  s.addLayer(palms, 0.45);
+  return s;
+}
+
 function labTheme(): Scenery {
   const s = new Scenery();
   s.addLayer(skyGradient(0x061417, 0x12302f), 0);
@@ -507,10 +683,11 @@ const THEME_FX: ThemeFx[] = [
   { emberColors: [0xff6d00, 0xff3d00, 0xffd600], emberUp: true, streakRate: 1.0, groundTint: 0xffb0a0 },
   { emberColors: [0xffffff, 0xe0aaff, 0xc77dff], emberUp: true, streakRate: 2.2, groundTint: 0xc0a8e8 },
   { emberColors: [0xe53935, 0xfdd835, 0x1e88e5, 0x43a047], emberUp: false, streakRate: 0, groundTint: 0xffffff, ground: "bricks" },
+  { emberColors: [0xff2fb9, 0x18ffff, 0xffd166], emberUp: true, streakRate: 0.6, groundTint: 0xffffff, ground: "neon" },
   { emberColors: [0x76ff03, 0x00e676, 0xb2ff59], emberUp: true, streakRate: 0, groundTint: 0x90a4ae },
 ];
 
-export const LEVEL_NAMES = ["VALLE DE LOS DINOS", "DESIERTO AL ATARDECER", "OCÉANO PROFUNDO", "SELVA DE NOCHE", "VOLCÁN EN ERUPCIÓN", "PLANETA ALIENÍGENA", "MUNDO DE BLOQUES", "LABORATORIO SECRETO"];
+export const LEVEL_NAMES = ["VALLE DE LOS DINOS", "DESIERTO AL ATARDECER", "OCÉANO PROFUNDO", "SELVA DE NOCHE", "VOLCÁN EN ERUPCIÓN", "PLANETA ALIENÍGENA", "MUNDO DE BLOQUES", "SANTA FE VICE CITY", "LABORATORIO SECRETO"];
 
 interface Ember {
   spr: Sprite;
@@ -547,7 +724,7 @@ export class Background extends Container {
 
   constructor() {
     super();
-    this.themes = [imageTheme(), desertTheme(), oceanTheme(), jungleTheme(), volcanoTheme(), meteorTheme(), blockTheme(), labTheme()];
+    this.themes = [imageTheme(), desertTheme(), oceanTheme(), jungleTheme(), volcanoTheme(), meteorTheme(), blockTheme(), viceTheme(), labTheme()];
     this.themes.forEach((th, i) => {
       th.visible = i === 0;
       this.addChild(th);
@@ -609,7 +786,7 @@ export class Background extends Container {
     const fx = THEME_FX[this.current];
     this.embers.forEach((e, i) => (e.spr.tint = fx.emberColors[i % fx.emberColors.length]));
     this.ground.tint = fx.groundTint;
-    this.ground.texture = fx.ground === "pier" ? Art.pier : fx.ground === "bricks" ? WArt.bricksGround : Art.ground;
+    this.ground.texture = fx.ground === "pier" ? Art.pier : fx.ground === "bricks" ? WArt.bricksGround : fx.ground === "neon" ? WArt.neonGround : Art.ground;
   }
 
   public update(dt: number, worldSpeed: number): void {

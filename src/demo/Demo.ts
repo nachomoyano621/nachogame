@@ -410,6 +410,8 @@ export async function runDemo(app: Application, record: boolean): Promise<void> 
   tap("ArrowUp");
   await sleep(0.8);
   tap("Enter");
+  await sleep(0.8);
+  tap("Enter"); // ¿cómo querés jugar? → aventura
   await sleep(0.4);
 
   // 2) Vikingo en el valle: monedas, aplastar dinos, recibir golpes, escudo de Colón, portal al desierto

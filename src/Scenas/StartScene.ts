@@ -144,6 +144,8 @@ class CharacterCard extends Container {
 }
 
 export class StartScene extends Container implements IScene {
+  /** Mundo tocado en la pantalla de título (se usa al abrir la pantalla de modo). */
+  public static pendingWorld: number | null = null;
   private readonly cards: CharacterCard[] = [];
   private readonly diffButtons: Graphics[] = [];
   private diffIdx = 1;
@@ -376,9 +378,12 @@ export class StartScene extends Container implements IScene {
       return;
     }
     // ¿cómo querés jugar? (aventura / sin fin / desafío del día, mundo y jugadores)
+    const startWorld = StartScene.pendingWorld ?? 1;
+    StartScene.pendingWorld = null;
     this.overlay = new PlayMenu({
       p1Id: def.id,
       difficulty: diff.id,
+      startWorld,
       onStart: (o: GameOptions) => SceneManager.change(new GameScene(def, diff, undefined, o)),
       onClose: () => this.closeOverlay(),
     });

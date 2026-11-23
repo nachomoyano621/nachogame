@@ -1,6 +1,6 @@
 // Service worker de Tomi Game: primero intenta la red (así siempre llega la última versión)
 // y si no hay internet usa lo guardado, para poder jugar sin conexión.
-const CACHE = "tomigame-v1";
+const CACHE = "tomigame-v2";
 const CORE = ["./", "./index.html", "./bundle.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {

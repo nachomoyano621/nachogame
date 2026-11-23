@@ -28,6 +28,8 @@ export interface RunState {
   credits: number;
   /** Personaje del jugador 2 (si jugaban dos). */
   p2Id?: CharacterId | null;
+  /** Arrancó en un mundo que no es el 1: es práctica (no llega al DINO-X). */
+  practice?: boolean;
 }
 
 export interface GameStats {

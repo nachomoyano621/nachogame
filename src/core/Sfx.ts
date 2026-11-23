@@ -223,6 +223,22 @@ export class Sfx {
       case "helibloque":
         for (let i = 0; i < 5; i++) Sfx.noise(0.04, 900 * k, 0.08, i * 0.05 * d, 3);
         break;
+      case "patinador":
+        Sfx.tone(1200 * k, 1600 * k, 0.08, "square", 0.04);
+        Sfx.tone(1600 * k, 1200 * k, 0.08, "square", 0.04, 0.1 * d);
+        break;
+      case "flamenco":
+        Sfx.tone(520 * k, 380 * k, 0.16 * d, "sawtooth", 0.05);
+        Sfx.tone(560 * k, 400 * k, 0.16 * d, "sawtooth", 0.04, 0.18 * d);
+        break;
+      case "auto neón":
+        Sfx.tone(440 * k, 440 * k, 0.09, "square", 0.05);
+        Sfx.tone(554 * k, 554 * k, 0.09, "square", 0.05, 0.12 * d);
+        break;
+      case "dorado":
+        Sfx.noise(0.25 * d, 1800, 0.08, 0, 0.7);
+        Sfx.tone(300 * k, 700 * k, 0.12, "sine", 0.06);
+        break;
       default:
         break; // peligros (lava, meteoritos, rex, mosasaurio) ya tienen su propio sonido
     }
@@ -259,6 +275,12 @@ export class Sfx {
       case "bloques": // crujido de bloques + golpe grave
         for (let i = 0; i < 4; i++) Sfx.tone(1900 - i * 250, 1500 - i * 250, 0.035, "square", 0.07, i * 0.07);
         Sfx.tone(110 * k, 40, 0.6, "triangle", 0.25, 0.3);
+        break;
+      case "dorado": // burbujeo + acorde de sintetizador ochentoso
+        for (let i = 0; i < 4; i++) Sfx.tone(260 + i * 120, 620 + i * 120, 0.1, "sine", 0.09, i * 0.07);
+        Sfx.tone(220 * k, 220 * k, 0.6, "sawtooth", 0.06, 0.3);
+        Sfx.tone(277 * k, 277 * k, 0.6, "sawtooth", 0.05, 0.3);
+        Sfx.tone(330 * k, 330 * k, 0.6, "sawtooth", 0.05, 0.3);
         break;
       case "dinox": // rugido metálico del laboratorio
         Sfx.tone(150 * k, 40, 1.3, "sawtooth", 0.18);
