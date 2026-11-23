@@ -255,7 +255,7 @@ export class TitleScene extends Container implements IScene {
       return;
     }
     Sfx.click();
-    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }));
+    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }, { mode: "aventura", startWorld: 1, p2Id: run.p2Id ?? null }));
   }
 
   private go(): void {

@@ -21,6 +21,8 @@ export class Player extends Container {
   public gliding = false;
   /** Multiplicador de velocidad (turbo del astronauta). */
   public speedMul = 1;
+  /** Multiplicador de gravedad (gravedad lunar del desafío). */
+  public gravMul = 1;
 
   private jumpsLeft: number;
   private coyote = 0;
@@ -180,7 +182,7 @@ export class Player extends Container {
     }
 
     // --- gravedad (más fuerte si soltás el salto o apretás abajo)
-    let g = Player.GRAVITY;
+    let g = Player.GRAVITY * this.gravMul;
     if (this.vy < 0 && !this.jumpHeld) {
       g *= 2.1;
     }

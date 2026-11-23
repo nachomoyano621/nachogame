@@ -35,9 +35,11 @@ interface SaveData {
   counters: Record<string, number>;
   /** Ya hizo el tutorial del Mundo 1. */
   tutorialDone: boolean;
+  /** Mundo más lejano al que llegó (8 = laboratorio): habilita el selector de mundo. */
+  maxWorld: number;
 }
 
-const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {}, tutorialDone: false };
+const DEFAULTS: SaveData = { best: 0, bests: {}, difficulty: "medio", muted: false, character: "vikingo", run: null, records: {}, lastName: "", unlocked: [], achievements: [], counters: {}, tutorialDone: false, maxWorld: 1 };
 
 function read(): SaveData {
   try {
@@ -136,6 +138,14 @@ export const Storage = {
   },
   setTutorialDone(v: boolean): void {
     write({ tutorialDone: v });
+  },
+  get maxWorld(): number {
+    return read().maxWorld;
+  },
+  reachWorld(n: number): void {
+    if (n > read().maxWorld) {
+      write({ maxWorld: n });
+    }
   },
   get character(): string {
     return read().character;

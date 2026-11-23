@@ -6,6 +6,7 @@ import { LEVEL_NAMES } from "../game/Background";
 import { Effects } from "../game/Effects";
 import { getCharacter, scaleFor } from "../game/characters";
 import { GameStats, START_CREDITS } from "../game/types";
+import { dailyRule } from "../game/modes";
 import { TextButton } from "../ui/Button";
 import { RecordGate } from "../ui/RecordsOverlay";
 import { makeShareButton } from "../ui/Share";
@@ -71,7 +72,16 @@ export class FinalScene extends Container implements IScene {
     this.ghostA.alpha = 0.55;
     this.ghostB.alpha = 0.55;
 
-    const where = stats.reachedBoss ? `Te venció el DINO-X en el ${LEVEL_NAMES[WORLDS]}` : `Caíste en el MUNDO ${stats.level}: ${LEVEL_NAMES[stats.level - 1]}`;
+const mode = stats.options?.mode ?? "aventura";
+    const mins = `${Math.floor(stats.time / 60)}:${String(Math.floor(stats.time % 60)).padStart(2, "0")}`;
+    const where =
+      mode === "sinfin"
+        ? `SIN FIN: aguantaste ${mins} y pasaste ${stats.laps ?? 0} ${(stats.laps ?? 0) === 1 ? "mundo" : "mundos"} · récord ${stats.best}`
+        : mode === "dia"
+          ? `DESAFÍO ${dailyRule().name}: aguantaste ${mins} · récord de hoy ${stats.best}`
+          : stats.reachedBoss
+            ? `Te venció el DINO-X en el ${LEVEL_NAMES[WORLDS]}`
+            : `Caíste en el MUNDO ${stats.level}: ${LEVEL_NAMES[stats.level - 1]}`;
     const sub = new Text(`${where}  ·  ${getDifficulty(stats.difficulty).name}`, style({ fontSize: 38, fill: "#ffcdd2", strokeThickness: 6 }));
     sub.anchor.set(0.5);
     sub.position.set(WIDTH / 2, 275);
@@ -140,7 +150,8 @@ export class FinalScene extends Container implements IScene {
     Keyboard.down.on("key", this.onKey, this);
     this.share = makeShareButton(this, stats, WIDTH - 190, 56);
     // TOP 5: pedir iniciales si entró (va arriba de todo)
-    this.records = new RecordGate(this, stats, WIDTH / 2 + 440, 430);
+    // el TOP 5 es de la aventura; los modos sin fin tienen su récord aparte
+    this.records = new RecordGate(this, mode === "aventura" ? stats : { ...stats, score: 0 }, WIDTH / 2 + 440, 430);
   }
 
   private onKey(code: string): void {
@@ -172,11 +183,11 @@ export class FinalScene extends Container implements IScene {
     if (!run || run.credits <= 0) {
       return;
     }
-    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }));
+    SceneManager.change(new GameScene(getCharacter(run.characterId), getDifficulty(run.difficulty), { ...run, credits: run.credits - 1 }, { mode: "aventura", startWorld: 1, p2Id: run.p2Id ?? null }));
   }
 
   private retry(): void {
-    SceneManager.change(new GameScene(getCharacter(this.stats.characterId), getDifficulty(this.stats.difficulty)));
+    SceneManager.change(new GameScene(getCharacter(this.stats.characterId), getDifficulty(this.stats.difficulty), undefined, this.stats.options));
   }
 
   private menu(): void {

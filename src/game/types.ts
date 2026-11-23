@@ -1,5 +1,6 @@
 import { DifficultyId } from "../config";
 import { CharacterId } from "./characters";
+import type { GameOptions } from "./modes";
 
 /** Fichas para continuar que tiene cada partida nueva. */
 export const START_CREDITS = 3;
@@ -25,6 +26,8 @@ export interface RunState {
   bosses: number;
   /** Fichas que quedan para continuar. */
   credits: number;
+  /** Personaje del jugador 2 (si jugaban dos). */
+  p2Id?: CharacterId | null;
 }
 
 export interface GameStats {
@@ -48,4 +51,8 @@ export interface GameStats {
   unlocked?: string;
   /** Para continuar (sólo en Game Over y si quedan fichas). */
   run?: RunState;
+  /** Modo y opciones de la partida (para REINTENTAR igual). */
+  options?: GameOptions;
+  /** SIN FIN / DESAFÍO: mundos recorridos. */
+  laps?: number;
 }

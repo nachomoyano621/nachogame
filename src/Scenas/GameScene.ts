@@ -32,6 +32,7 @@ import { WArt } from "../art/WorldArt";
 import { Player } from "../game/Player";
 import { Tutorial } from "../game/Tutorial";
 import { Ghost } from "../game/Ghost";
+import { DEFAULT_OPTIONS, DailyRule, ENDLESS_WORLD_TIME, GameOptions, dailyRule, modeBestKey } from "../game/modes";
 import { GameStats, RunState, START_CREDITS } from "../game/types";
 import { Hud } from "../ui/Hud";
 import { TouchControls } from "../ui/TouchControls";
@@ -155,6 +156,12 @@ export class GameScene extends Container implements IScene {
   private runId = newRunId();
   /** Vidas perdidas en la partida (para el logro INTOCABLE). */
   private livesLost = 0;
+  /** Modos SIN FIN / DESAFÍO: velocidad extra que va subiendo, tiempo del mundo y mundos recorridos. */
+  private endlessMul = 1;
+  private endlessT = 0;
+  private laps = 0;
+  /** Regla del DESAFÍO DEL DÍA (null en los otros modos). */
+  private rule: DailyRule | null = null;
   /** Recarga del poder especial (0 = listo). */
   private powerCd = 0;
   /** Segundos de TURBO que quedan (astronauta). */
@@ -165,7 +172,7 @@ export class GameScene extends Container implements IScene {
   private movedDist = 0;
   private readonly offAch: () => void;
 
-  constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState) {
+  constructor(private readonly def: CharacterDef, private readonly diff: Difficulty, run?: RunState, private readonly opts: GameOptions = DEFAULT_OPTIONS) {
     super();
     this.startLives = Math.max(1, Math.min(MAX_LIVES, def.lives + diff.extraLives));
     this.lives = this.startLives;
@@ -208,6 +215,11 @@ export class GameScene extends Container implements IScene {
 
     if (run) {
       this.resume(run);
+    } else if (this.endless) {
+      this.setupEndless();
+    } else if (this.opts.startWorld > 1) {
+      Storage.saveRun(null);
+      this.startAtWorld(this.opts.startWorld);
     } else {
       Storage.saveRun(null); // partida nueva: se descarta la que había para continuar
       this.hud.showBanner(`MUNDO 1 · ${diff.name}`, LEVEL_NAMES[0], 2.4);
@@ -219,6 +231,68 @@ export class GameScene extends Container implements IScene {
       AudioCtl.music(`world${this.level}`);
     }
     this.refreshArsenal();
+  }
+
+/** Modos SIN FIN y DESAFÍO DEL DÍA. */
+  private get endless(): boolean {
+    return this.opts.mode !== "aventura";
+  }
+
+  /** Aventura desde un mundo ya alcanzado (8 = directo al laboratorio). */
+  private startAtWorld(w: number): void {
+    if (w > WORLDS) {
+      this.level = WORLDS;
+      this.hud.setLevel(WORLDS + 1);
+      this.hud.setCoins(COINS_PER_WORLD, true);
+      this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
+      this.startBoss(FINAL_BOSS);
+      return;
+    }
+    this.level = w;
+    this.bg.setTheme(w - 1, 0.01);
+    this.hud.setLevel(w);
+    this.hud.setCoins(0, w === WORLDS);
+    AudioCtl.music(`world${w}`);
+    this.hud.showBanner(`MUNDO ${w} · ${this.diff.name}`, `${LEVEL_NAMES[w - 1]} · ${LEVEL_MESSAGES[w] ?? ""}`, 2.6);
+  }
+
+  private setupEndless(): void {
+    this.rule = this.opts.mode === "dia" ? dailyRule() : null;
+    this.endlessT = ENDLESS_WORLD_TIME;
+    if (this.rule?.id === "turbo") this.endlessMul = 1.35;
+    if (this.rule?.id === "luna") this.player.gravMul = 0.55;
+    if (this.rule?.id === "bazooka") this.setWeapon("bazooka");
+    const title = this.rule ? `DESAFÍO: ${this.rule.name}` : "MODO SIN FIN";
+    const sub = this.rule ? this.rule.desc : "Cada 40 s cambia el mundo y todo va más rápido. ¿Cuánto aguantás?";
+    this.hud.showBanner(title, sub, 3);
+    AudioCtl.music("world1");
+    this.refreshEndlessBar();
+  }
+
+  private refreshEndlessBar(): void {
+    const label = this.rule ? `${this.rule.icon} ${this.rule.name}` : "SIN FIN";
+    this.hud.setEndless(this.totalCoins, this.endlessT / ENDLESS_WORLD_TIME, `${label} · próximo mundo en ${Math.ceil(this.endlessT)} s · x${this.endlessMul.toFixed(2)}`);
+  }
+
+  private updateEndless(dt: number): void {
+    const before = Math.ceil(this.endlessT);
+    this.endlessT -= dt;
+    if (this.endlessT <= 0) {
+      this.endlessT = ENDLESS_WORLD_TIME;
+      this.laps++;
+      this.level = (this.level % WORLDS) + 1;
+      this.endlessMul += 0.06;
+      this.bg.setTheme(this.level - 1, 0.6);
+      this.hud.setLevel(this.level);
+      AudioCtl.music(`world${this.level}`);
+      this.hud.showBanner(`¡MUNDO ${this.level}!`, `${LEVEL_NAMES[this.level - 1]} · ahora todo va x${this.endlessMul.toFixed(2)}`, 2.4);
+      Sfx.levelUp();
+      this.confetti();
+      this.addScore(250);
+    }
+    if (Math.ceil(this.endlessT) !== before) {
+      this.refreshEndlessBar();
+    }
   }
 
   /** CONTINUAR: arranca en el mundo (o el laboratorio) donde se cayó, con la billetera y los puntos. */
@@ -382,7 +456,7 @@ export class GameScene extends Container implements IScene {
 
   private get speedMul(): number {
     // medido con el piloto: con +13% por mundo el 6 y el 7 eran 20-40 veces más difíciles que el 1
-    return (1 + 0.08 * (this.level - 1)) * this.diff.speed;
+    return (1 + 0.08 * (this.level - 1)) * this.diff.speed * this.endlessMul;
   }
 
   public update(dtMS: number): void {
@@ -433,6 +507,9 @@ export class GameScene extends Container implements IScene {
       // mantener F apretada = dispara seguido (metralleta)
       this.fireCd -= dt;
       this.updatePower(dt);
+      if (this.endless) {
+        this.updateEndless(dt);
+      }
       if (this.weapon && !this.carrying && Keyboard.isDown(...THROW_KEYS)) {
         this.tryFire();
       }
@@ -503,7 +580,7 @@ export class GameScene extends Container implements IScene {
       return; // durante el jefe y con el portal abierto: sin monstruos ni monedas (sólo power-ups)
     }
     // desierto: cráneos para agarrar y lanzar
-    if (this.level === 2 && !this.carrying && this.skulls.length === 0) {
+    if ((this.level === 2 || this.rule?.id === "craneos") && !this.carrying && this.skulls.length === 0) {
       this.skullTimer -= dt;
       if (this.skullTimer <= 0) {
         this.spawnSkull();
@@ -522,7 +599,7 @@ export class GameScene extends Container implements IScene {
     }
     // lluvia de meteoritos: en el planeta alienígena (y en el volcán si es DIFÍCIL)
     // (en el mundo de bloques, en vez de meteoritos llueven ladrillos)
-    if (this.level === 6 || this.level === 7 || (this.level === 5 && this.diff.id === "dificil")) {
+    if (this.level === 6 || this.level === 7 || (this.level === 5 && this.diff.id === "dificil") || this.rule?.id === "meteoros") {
       this.meteorTimer -= dt;
       if (this.meteorTimer <= 0) {
         this.spawnMeteors();
@@ -1216,7 +1293,7 @@ export class GameScene extends Container implements IScene {
     this.hitStop = 0.12;
     this.fx.burst(px, py, { count: 24, colors: [0xff1744, 0xffffff, 0xffeb3b], speed: 520, life: 0.6 });
     this.fx.floatText(px, py - 120, "-1 VIDA", "#ff5252", 52);
-    if (this.weapon) {
+    if (this.weapon && this.rule?.id !== "bazooka") {
       this.fx.floatText(px, py - 190, `¡PERDISTE LA ${this.weapon.name}!`, "#ff8a80", 40);
       this.fx.burst(px, py, { count: 12, colors: [0x455a64, 0x90a4ae], speed: 400, life: 0.6, gravity: 900 });
       this.setWeapon(null);
@@ -1243,6 +1320,18 @@ export class GameScene extends Container implements IScene {
   }
 
   private collectCoin(c: Coin): void {
+    if (this.endless) {
+      // sin meta de monedas: suman puntos (x3 con las monedas de oro del desafío)
+      const mult = (this.x2T > 0 ? 2 : 1) * (this.rule?.id === "oro" ? 3 : 1);
+      this.totalCoins += 1;
+      Achievements.add("coins");
+      this.addScore(10 * mult);
+      AudioCtl.coin();
+      this.fx.burst(c.x, c.y, { count: 8, colors: [0xffeb3b, 0xffc107, 0xffffff], speed: 260, life: 0.4, gravity: 300 });
+      this.fx.floatText(c.x, c.y - 30, `+${10 * mult}`, "#ffeb3b", 34);
+      this.refreshEndlessBar();
+      return;
+    }
     if (this.coinsCollected >= COINS_PER_WORLD) {
       return; // el portal ya está abierto: las monedas de más no cuentan
     }
@@ -1369,6 +1458,7 @@ export class GameScene extends Container implements IScene {
 
   private advanceWorld(): void {
     if (this.level >= WORLDS) {
+      Storage.reachWorld(WORLDS + 1);
       this.hud.setCoins(COINS_PER_WORLD, true);
       this.hud.setBarMessage("¡DERROTÁ AL DINO-X!");
       this.hud.setLevel(WORLDS + 1);
@@ -1377,6 +1467,7 @@ export class GameScene extends Container implements IScene {
     }
     const newLevel = this.level + 1;
     this.level = newLevel;
+    Storage.reachWorld(newLevel);
     this.hud.setLevel(newLevel);
     this.hud.setCoins(0, newLevel === WORLDS);
     this.bg.setTheme(newLevel - 1, 0.5);
@@ -1521,10 +1612,11 @@ export class GameScene extends Container implements IScene {
 
   private finish(): void {
     const won = this.state === "won";
-    const best = Storage.bestFor(this.diff.id);
+    const bestKey = this.endless ? modeBestKey(this.opts.mode, this.diff.id) : this.diff.id;
+    const best = Storage.bestFor(bestKey);
     const newRecord = this.score > best;
     if (newRecord) {
-      Storage.setBestFor(this.diff.id, this.score);
+      Storage.setBestFor(bestKey, this.score);
     }
     const stats: GameStats = {
       score: this.score,
@@ -1540,6 +1632,8 @@ export class GameScene extends Container implements IScene {
       best: Math.max(best, this.score),
       newRecord,
       runId: this.runId,
+      options: this.opts,
+      laps: this.laps,
     };
     if (won) {
       Storage.saveRun(null);
@@ -1547,7 +1641,7 @@ export class GameScene extends Container implements IScene {
       if (this.bossDefeated && Storage.unlock("rojinegro")) {
         stats.unlocked = getCharacter("rojinegro").name;
       }
-    } else {
+    } else if (!this.endless) {
       // para CONTINUAR desde este mundo (si quedan fichas)
       const run: RunState = {
         runId: this.runId,

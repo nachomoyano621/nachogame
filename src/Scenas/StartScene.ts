@@ -9,6 +9,8 @@ import { CHARACTERS, CharacterDef, scaleFor } from "../game/characters";
 import { TextButton } from "../ui/Button";
 import { RecordsOverlay } from "../ui/RecordsOverlay";
 import { AchievementsOverlay } from "../ui/AchievementsOverlay";
+import { PlayMenu } from "../ui/PlayMenu";
+import { GameOptions } from "../game/modes";
 import { ACHIEVEMENTS, Achievements } from "../core/Achievements";
 import { style } from "../ui/styles";
 import { TOUCH } from "../ui/touch";
@@ -347,7 +349,17 @@ export class StartScene extends Container implements IScene {
     const diff = DIFFICULTIES[this.diffIdx];
     Storage.setCharacter(def.id);
     Storage.setDifficulty(diff.id);
-    SceneManager.change(new GameScene(def, diff));
+    if (this.overlay) {
+      return;
+    }
+    // ¿cómo querés jugar? (aventura / sin fin / desafío del día, mundo y jugadores)
+    this.overlay = new PlayMenu({
+      p1Id: def.id,
+      difficulty: diff.id,
+      onStart: (o: GameOptions) => SceneManager.change(new GameScene(def, diff, undefined, o)),
+      onClose: () => this.closeOverlay(),
+    });
+    this.addChild(this.overlay);
   }
 
   /** Cambia el mundo que se ve de fondo en el menú. */

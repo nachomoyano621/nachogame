@@ -280,7 +280,7 @@ export class WinScene extends Container implements IScene {
   }
 
   private retry(): void {
-    SceneManager.change(new GameScene(getCharacter(this.stats.characterId), getDifficulty(this.stats.difficulty)));
+    SceneManager.change(new GameScene(getCharacter(this.stats.characterId), getDifficulty(this.stats.difficulty), undefined, this.stats.options));
   }
 
   private menu(): void {

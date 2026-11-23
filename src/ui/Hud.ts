@@ -289,6 +289,24 @@ export class Hud extends Container {
     this.barText.text = n >= COINS_PER_WORLD ? `¡${goal} ABIERTO! → entrá` : `${n} / ${COINS_PER_WORLD} MONEDAS → ${goal}`;
   }
 
+/** Modos sin fin: monedas sin meta y la barra muestra el tiempo hasta el próximo mundo. */
+  public setEndless(coins: number, frac: number, text: string): void {
+    this.coinText.text = `${coins}`;
+    this.lastCoins = -1;
+    const W = 600;
+    const H = 30;
+    this.bar.clear();
+    this.bar.beginFill(0x000000, 0.6);
+    this.bar.drawRoundedRect(0, 0, W, H, 15);
+    this.bar.endFill();
+    this.bar.beginFill(0xb388ff);
+    this.bar.drawRoundedRect(3, 3, Math.max(24, (W - 6) * Math.max(0, Math.min(1, frac))), H - 6, 12);
+    this.bar.endFill();
+    this.bar.lineStyle(3, 0xffffff, 0.85);
+    this.bar.drawRoundedRect(0, 0, W, H, 15);
+    this.barText.text = text;
+  }
+
   /** Mensaje fijo en la barra (ej: durante la pelea con el jefe). */
   public setBarMessage(text: string): void {
     this.barText.text = text;
