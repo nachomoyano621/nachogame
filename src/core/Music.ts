@@ -91,6 +91,8 @@ interface Step {
   bassLen: number;
   arp: number | null;
   ooh: number | null;
+  /** Colchón: notas del acorde que suenan todo el compás (suave, para que no haya huecos). */
+  pad: number[] | null;
   drums: Drums;
   /** Redoble de cierre de parte. */
   fill: boolean;
@@ -161,50 +163,73 @@ interface Part {
   mel: (number | null)[][] | null;
   leadType: OscillatorType;
   octave: number;
-  transpose: number;
   drums: Drums;
   arp: boolean;
   bass: "normal" | "busy" | "funk" | "pedal";
   ooh: boolean;
+  /** Redoble al final de la parte. */
+  fill: boolean;
+}
+
+/** Ritmos alternativos para que cada parte tenga el suyo (parecido al del tema). */
+function altRhythm(r: number[], k: number): number[] {
+  const pool = [MEDIUM, BOUNCY, FUNKY, SLOW, BUSY].filter((x) => x !== r);
+  // los temas lentos alternan con ritmos tranquilos; los movidos, con movidos
+  const calm = r === SLOW;
+  const order = calm ? [MEDIUM, SLOW, FUNKY] : pool;
+  return order[k % order.length];
 }
 
 /**
- * Compone una vuelta completa de la canción (~50 compases).
- * `cycle` cambia semillas y tono para que la vuelta siguiente no sea igual.
+ * Frase de 8 compases tipo "pregunta y respuesta": 4 compases + 2 que la recuerdan + 2 nuevos que cierran.
+ * Así la melodía no repite el mismo pedacito de 4 compases una y otra vez.
+ */
+function phrase8(def: TrackDef, chords: number[], seed: number, rhythm: number[], rhythm2: number[]): (number | null)[][] {
+  const a = melody(def, chords, seed, rhythm);
+  const b = melody(def, chords, seed + 7, rhythm2);
+  const av = vary(a, seed + 3);
+  return [a[0], a[1], a[2], a[3], av[0], av[1], b[2], b[3]];
+}
+
+/**
+ * Compone una vuelta de la canción (~48 compases, 1:30 a 2 minutos).
+ * Todas las partes en el mismo tono y sin huecos; cada vuelta cambia las melodías (otra semilla)
+ * pero sigue en el mismo tono, así no parece que la música "se corta y vuelve a empezar".
  */
 function compose(def: TrackDef, cycle = 0): Step[] {
   const n = def.scale.length;
   const seed = def.seed + cycle * 101;
-  const shift = [0, 2, -3, 5, -1][cycle % 5]; // cada vuelta en otro tono
   const chordsA = def.chords;
   const chordsB = def.chordsB ?? [chordsA[2], chordsA[3], chordsA[0], chordsA[1]];
+  const chordsC = [chordsB[1], chordsA[2], chordsB[3], chordsA[3]];
   const lead2 = def.lead2 ?? def.lead;
   const bassMode = def.funkBass ? "funk" : def.busyBass ? "busy" : "normal";
-  const themeA = melody(def, chordsA, seed, def.rhythm);
-  const themeB = melody(def, chordsB, seed + 17, def.rhythm === SLOW ? MEDIUM : def.rhythm);
-  const solo = melody(def, chordsA, seed + 29, def.rhythm === SLOW ? MEDIUM : BUSY);
-  const sparse = melody(def, chordsB, seed + 43, SLOW);
-  const calmDrums: Drums = def.drums === "none" ? "none" : "half";
+  const r0 = def.rhythm;
+  const phraseA = phrase8(def, chordsA, seed, r0, altRhythm(r0, cycle));
+  const phraseA2 = phrase8(def, chordsA, seed + 11, r0, altRhythm(r0, cycle + 1));
+  const phraseB = phrase8(def, chordsB, seed + 17, altRhythm(r0, cycle + 2), r0);
+  const phraseC = phrase8(def, chordsC, seed + 29, altRhythm(r0, cycle + 3), altRhythm(r0, cycle + 4));
+  const phraseB2 = phrase8(def, chordsB, seed + 37, altRhythm(r0, cycle + 2), altRhythm(r0, cycle + 1));
   const P = (o: Partial<Part> & { bars: number; chords: number[] }): Part => ({
-    mel: null, leadType: def.lead, octave: 0, transpose: shift, drums: def.drums, arp: !!def.arp, bass: bassMode, ooh: false, ...o,
+    mel: null, leadType: def.lead, octave: 0, drums: def.drums, arp: false, bass: bassMode, ooh: false, fill: false, ...o,
   });
   const parts: Part[] = def.short
-    ? [P({ bars: 8, chords: chordsA, mel: themeA, transpose: 0 })]
+    ? [P({ bars: 8, chords: chordsA, mel: phraseA })]
     : [
-        P({ bars: 4, chords: chordsA, drums: calmDrums, arp: true, bass: "pedal" }), // intro
-        P({ bars: 8, chords: chordsA, mel: themeA, ooh: !!def.ooh }), // tema A
-        P({ bars: 8, chords: chordsA, mel: vary(themeA, seed + 5), arp: true }), // A con variación
-        P({ bars: 8, chords: chordsB, mel: themeB, leadType: lead2, ooh: !!def.ooh }), // parte B
-        P({ bars: 4, chords: chordsB, mel: sparse, octave: 1, drums: calmDrums, bass: "pedal", arp: true }), // quiebre
-        P({ bars: 8, chords: chordsA, mel: solo, leadType: lead2 }), // solo
-        P({ bars: 8, chords: chordsA, mel: vary(themeA, seed + 9), transpose: shift + 2, arp: true, ooh: !!def.ooh }), // tema final un tono arriba
-        P({ bars: 2, chords: [chordsA[3], chordsA[0]], drums: def.drums }), // remate
+        // la intro (corta) sólo al empezar: en las vueltas siguientes la música sigue de largo
+        ...(cycle === 0 ? [P({ bars: 2, chords: chordsA, drums: def.drums === "none" ? "none" : "half", bass: "pedal" })] : []),
+        P({ bars: 8, chords: chordsA, mel: phraseA }), // tema A
+        P({ bars: 8, chords: chordsB, mel: phraseB, leadType: lead2, ooh: !!def.ooh }), // parte B
+        P({ bars: 8, chords: chordsA, mel: phraseA2, arp: !!def.arp }), // A con otra respuesta
+        P({ bars: 8, chords: chordsC, mel: phraseC, octave: 1, arp: !!def.arp, fill: true }), // puente
+        P({ bars: 8, chords: chordsB, mel: phraseB2, leadType: lead2, ooh: !!def.ooh }), // B con otra melodía
+        P({ bars: 8, chords: chordsA, mel: vary(phraseA, seed + 9), octave: 0, fill: true }), // vuelve el tema
       ];
   const steps: Step[] = [];
   for (const part of parts) {
     for (let bar = 0; bar < part.bars; bar++) {
       const chord = part.chords[bar % part.chords.length];
-      let mel = part.mel ? part.mel[bar % 4] : null;
+      let mel = part.mel ? part.mel[bar % part.mel.length] : null;
       if (mel && bar === part.bars - 1) {
         // final de frase: termina en la tónica del acorde
         mel = mel.map((nt, i) => (nt === null ? null : i >= 12 ? part.chords[0] + n : nt));
@@ -224,29 +249,30 @@ function compose(def: TrackDef, cycle = 0): Step[] {
           if (i % 4 === 2) bassDeg = chord + 4;
           bassLen = 1.6;
         } else if (part.bass === "funk") {
-          // sincopado con saltos de octava
           bassOn = [0, 3, 6, 8, 10, 11, 14].includes(i);
           if (i === 6 || i === 14) bassOct = 0;
           if (i === 10) bassDeg = chord + 4;
           if (i === 11) bassDeg = chord + 5;
           bassLen = i === 0 || i === 8 ? 1.8 : 0.9;
         } else if (part.bass === "pedal") {
-          bassOn = i === 0;
-          bassLen = 14;
+          bassOn = i === 0 || i === 8;
+          bassLen = 7;
         } else {
           bassOn = i === 0 || i === 8 || (i === 14 && bar % 2 === 1);
         }
-        const arpTones = [chord, chord + 2, chord + 4, chord + 7];
+        // arpegio tranquilo: en corcheas y siguiendo el acorde
+        const arpTones = [chord, chord + 2, chord + 4, chord + 2];
         steps.push({
-          lead: mel && mel[i] !== null ? degree(def, mel[i] as number, part.octave, part.transpose) : null,
+          lead: mel && mel[i] !== null ? degree(def, mel[i] as number, part.octave) : null,
           leadLen: len,
           leadType: part.leadType,
-          bass: bassOn ? degree(def, bassDeg, bassOct, part.transpose) : null,
+          bass: bassOn ? degree(def, bassDeg, bassOct) : null,
           bassLen,
-          arp: part.arp ? degree(def, arpTones[i % 4], 1, part.transpose) : null,
-          ooh: part.ooh && i === 0 && bar % 2 === 0 ? degree(def, chord + n, 0, part.transpose) : null,
+          arp: part.arp && i % 2 === 0 ? degree(def, arpTones[(i / 2) % 4], 1) : null,
+          ooh: part.ooh && i === 0 && bar % 2 === 0 ? degree(def, chord + n, 0) : null,
+          pad: i === 0 ? [degree(def, chord, 0), degree(def, chord + 2, 0), degree(def, chord + 4, 0)] : null,
           drums: part.drums,
-          fill: lastBar && i >= 12 && part.drums !== "none",
+          fill: part.fill && lastBar && i >= 12 && part.drums !== "none",
         });
       }
     }
@@ -270,6 +296,8 @@ export class Music {
   private static steps: Step[] = [];
   private static stepIdx = 0;
   private static cycle = 0;
+  /** Por dónde iba cada tema (si vuelve a sonar, sigue de ahí en vez de empezar de cero). */
+  private static saved = new Map<string, { steps: Step[]; stepIdx: number; cycle: number }>();
   private static nextTime = 0;
   private static timer: number | null = null;
   private static muted = false;
@@ -323,9 +351,12 @@ export class Music {
     Music.stop();
     Music.current = name;
     Music.def = def;
-    Music.cycle = 0;
-    Music.steps = compose(def, 0);
-    Music.stepIdx = 0;
+    const prev = def.short ? undefined : Music.saved.get(name);
+    Music.saved.delete(name);
+    Music.cycle = prev ? prev.cycle : 0;
+    Music.steps = prev ? prev.steps : compose(def, 0);
+    // retoma desde el comienzo del compás donde había quedado
+    Music.stepIdx = prev ? prev.stepIdx - (prev.stepIdx % 16) : 0;
     Music.trackGain = ctx.createGain();
     Music.trackGain.gain.value = 1;
     Music.trackGain.connect(Music.master);
@@ -335,6 +366,9 @@ export class Music {
   }
 
   public static stop(): void {
+    if (Music.current && Music.def && !Music.def.short) {
+      Music.saved.set(Music.current, { steps: Music.steps, stepIdx: Music.stepIdx, cycle: Music.cycle });
+    }
     if (Music.timer !== null) {
       window.clearInterval(Music.timer);
       Music.timer = null;
@@ -383,7 +417,10 @@ export class Music {
       const t = Music.nextTime + swing;
       if (st.lead !== null) Music.note(st.leadType, midiFreq(st.lead), t, sixteenth * st.leadLen * 0.9, 0.22 * (def.leadVol ?? 1));
       if (st.bass !== null) Music.note(def.bass, midiFreq(st.bass), t, sixteenth * st.bassLen, def.funkBass ? 0.22 : 0.28);
-      if (st.arp !== null) Music.note("square", midiFreq(st.arp), t, sixteenth * 0.6, 0.05);
+      if (st.arp !== null) Music.note("triangle", midiFreq(st.arp), t, sixteenth * 1.4, 0.045);
+      if (st.pad) {
+        for (const pn of st.pad) Music.note("triangle", midiFreq(pn), t, sixteenth * 15.5, 0.026);
+      }
       if (st.ooh !== null) Music.ooh(midiFreq(st.ooh), t, sixteenth * 28);
       const d = DRUMS[st.drums];
       if (st.fill) {
@@ -511,4 +548,56 @@ export class Music {
     osc.start(t);
     osc.stop(t + 0.25);
   }
+}
+
+/**
+ * Para pruebas: mide cuánto se repite un tema y dónde "se corta".
+ * - frases: cuántas veces suena la frase de 2 compases más repetida en una vuelta
+ * - sinMelodia: compases seguidos sin melodía (huecos que suenan a corte)
+ * - saltoDeTono: semitonos que cambia la tonalidad al pasar de una vuelta a la siguiente
+ */
+export function analyzeTrack(name: string): { segundos: number; compases: number; ritmosDistintos: number; mismoRitmoPct: number; fraseMasRepetida: number; frasesDistintas: number; maxCompasesSinMelodia: number; saltoDeTono: number; arrancaSinMelodia: boolean } {
+  const def = TRACKS[name];
+  const a = compose(def, 0);
+  const b = compose(def, 1);
+  const bars = (st: Step[]): Step[][] => Array.from({ length: Math.floor(st.length / 16) }, (_, i) => st.slice(i * 16, i * 16 + 16));
+  const ba = bars(a);
+  // forma de la melodía: en qué tiempos suena y cuánto sube/baja (igual aunque esté en otro tono u octava)
+  const sig = (bs: Step[]): string => {
+    let prev: number | null = null;
+    return bs.map((x) => { if (x.lead === null) return "-"; const d = prev === null ? 0 : x.lead - prev; prev = x.lead; return String(d); }).join(",");
+  };
+  const counts = new Map<string, number>();
+  for (const bar of ba) {
+    const k = sig(bar);
+    if (/^[-,]+$/.test(k)) continue;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const rhythms = new Map<string, number>();
+  for (const bar of ba) {
+    const k = bar.map((x) => (x.lead === null ? 0 : 1)).join("");
+    if (!k.includes("1")) continue;
+    rhythms.set(k, (rhythms.get(k) ?? 0) + 1);
+  }
+  const withLead = [...rhythms.values()].reduce((a2, b2) => a2 + b2, 0);
+  let run = 0;
+  let maxRun = 0;
+  for (const bar of ba) {
+    run = bar.every((x) => x.lead === null) ? run + 1 : 0;
+    maxRun = Math.max(maxRun, run);
+  }
+  const lastBass = [...a].reverse().find((x) => x.bass !== null)?.bass ?? 0;
+  const firstBass = b.find((x) => x.bass !== null)?.bass ?? 0;
+  const firstBarsB = bars(b).slice(0, 2);
+  return {
+    segundos: Math.round((a.length * 60) / def.bpm / 4),
+    compases: ba.length,
+    ritmosDistintos: rhythms.size,
+    mismoRitmoPct: Math.round((Math.max(0, ...rhythms.values()) / Math.max(1, withLead)) * 100),
+    fraseMasRepetida: Math.max(0, ...counts.values()),
+    frasesDistintas: counts.size,
+    maxCompasesSinMelodia: maxRun,
+    saltoDeTono: Math.abs(((firstBass - lastBass) % 12 + 12) % 12) % 12,
+    arrancaSinMelodia: firstBarsB.every((bar) => bar.every((x) => x.lead === null)),
+  };
 }
